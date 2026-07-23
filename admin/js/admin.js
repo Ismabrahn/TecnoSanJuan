@@ -61,8 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mod.custom && mod.render) {
       toolbar.innerHTML = '';
-      contentArea.innerHTML = '';
-      await mod.render(contentArea);
+      contentArea.innerHTML = '<div class="empty-state">Cargando mÃ³dulo...</div>';
+      try {
+        await mod.render(contentArea);
+      } catch (err) {
+        contentArea.innerHTML = `<div class="empty-state">Error al cargar: ${err.message}</div>`;
+      }
     } else if (mod.single) {
       await loadSingleModule(mod);
     } else {
