@@ -43,7 +43,7 @@ export function initChatbot() {
       addMessage(data.response, 'bot', data.source);
     } catch (err) {
       typing.remove();
-      addMessage('Lo siento, hubo un error al procesar tu mensaje. Intentalo de nuevo.', 'bot');
+      addMessage(err.message || 'Error de conexión', 'bot');
     } finally {
       send.disabled = false;
       input.focus();
