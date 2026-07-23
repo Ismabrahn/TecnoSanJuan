@@ -6,6 +6,7 @@ import {
   handleAdminUpdate,
   handleAdminDelete,
 } from './handlers/admin.js';
+import { handleUpdatePassword } from './handlers/admin.js';
 import { handleChat, handleHealth } from './handlers/chat.js';
 import { requireAdmin } from './middleware/auth.js';
 import { handleOptions, getCorsHeaders } from './middleware/cors.js';
@@ -25,6 +26,58 @@ export async function handleRequest(request, env) {
     const path = url.pathname;
 
     const corsHeaders = getCorsHeaders(request);
+
+    if (path === '/api/admin/update-password' && request.method === 'POST') {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      const response = await handleUpdatePassword(request, env, auth);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/api/admin/upload' && request.method === 'POST') {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      try {
+        const formData = await request.formData();
+        const file = formData.get('file');
+        if (!file) {
+          const errResp = errorResponse(request, 400, 'Falta el archivo');
+          return addCors(errResp, corsHeaders);
+        }
+        const ext = file.name.split('.').pop() || 'png';
+        const fileName = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const svcKey = env.SUPABASE_SERVICE_ROLE_KEY;
+        const base = env.SUPABASE_URL;
+        const buffer = await file.arrayBuffer();
+        const uploadRes = await fetch(`${base}/storage/v1/object/images/${fileName}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${svcKey}`,
+            'apikey': svcKey,
+            'Content-Type': file.type,
+            'x-upsert': 'true',
+          },
+          body: buffer,
+        });
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text();
+          const errResp = errorResponse(request, 500, `Error al subir: ${errText}`);
+          return addCors(errResp, corsHeaders);
+        }
+        const publicUrl = `${base}/storage/v1/object/public/images/${fileName}`;
+        const uploadResp = new Response(JSON.stringify({ url: publicUrl }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        return addCors(uploadResp, corsHeaders);
+      } catch (err) {
+        const errResp = errorResponse(request, 500, err.message);
+        return addCors(errResp, corsHeaders);
+      }
+    }
 
     if (path === HEALTH_PATH) {
       const response = await handleHealth(env);

@@ -106,6 +106,82 @@ export async function handleAdminDelete(request, env, resource, id) {
   }
 }
 
+export async function handleUpdatePassword(request, env, auth) {
+  try {
+    const body = await request.json();
+    const newPassword = body.password;
+    if (!newPassword || newPassword.length < 8) {
+      return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userEmail = auth.user?.email;
+    if (!userEmail) {
+      return new Response(JSON.stringify({ error: 'Email no encontrado en el token' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = env.SUPABASE_URL;
+    const svcKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(userEmail)}`, {
+      headers: {
+        'Authorization': `Bearer ${svcKey}`,
+        'apikey': svcKey,
+      },
+    });
+
+    if (!listRes.ok) {
+      const errText = await listRes.text();
+      return new Response(JSON.stringify({ error: `Error al buscar usuario: ${errText}` }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const users = await listRes.json();
+    const user = Array.isArray(users) ? users[0] : users?.users?.[0];
+
+    if (!user || !user.id) {
+      return new Response(JSON.stringify({ error: 'Usuario no encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${svcKey}`,
+        'apikey': svcKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password: newPassword }),
+    });
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      return new Response(JSON.stringify({ error: `Error al actualizar contraseña: ${errText}` }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, message: 'Contraseña actualizada correctamente' }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
 function sanitizeObject(obj) {
   if (typeof obj !== 'object' || obj === null) return obj;
   const result = {};

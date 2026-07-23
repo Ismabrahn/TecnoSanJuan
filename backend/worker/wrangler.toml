@@ -10,7 +10,6 @@ OPENROUTER_MODEL = "openai/gpt-4o-mini"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
 SITE_URL = "https://tecnosanjuan.com"
-
 [env.development]
 vars = { ENVIRONMENT = "development" }
 

@@ -81,9 +81,10 @@ async function refreshToken(refreshToken) {
   };
 }
 
+const ADMIN_EMAIL = 'admin@tecnosanjuan.com';
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
-  const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const errorDiv = document.getElementById('loginError');
   const loginBtn = document.getElementById('loginBtn');
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginBtn.textContent = 'Ingresando...';
 
     try {
-      const session = await login(emailInput.value, passwordInput.value);
+      const session = await login(ADMIN_EMAIL, passwordInput.value);
       setSession(session);
       window.location.href = 'index.html';
     } catch (err) {
