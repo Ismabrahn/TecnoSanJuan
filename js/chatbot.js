@@ -1,9 +1,9 @@
 import { $, createElement } from './utils.js';
-import { fetchChat } from './api.js';
+import { fetchChat, fetchPublic } from './api.js';
 
 let initialized = false;
 
-export function initChatbot() {
+export async function initChatbot() {
   if (initialized) return;
   initialized = true;
 
@@ -88,5 +88,11 @@ export function initChatbot() {
     return indicator;
   }
 
-  addMessage('¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.', 'bot');
+  try {
+    const config = await fetchPublic('chatbot-config');
+    const welcome = config?.welcome_message || '¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.';
+    addMessage(welcome, 'bot');
+  } catch {
+    addMessage('¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.', 'bot');
+  }
 }
