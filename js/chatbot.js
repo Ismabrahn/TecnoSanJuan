@@ -18,18 +18,16 @@ export async function initChatbot() {
 
   let isOpen = false;
 
-  toggle.addEventListener('click', () => {
-    isOpen = !isOpen;
+  function togglePanel(open) {
+    isOpen = open;
     panel.classList.toggle('hidden', !isOpen);
     toggle.style.display = isOpen ? 'none' : 'flex';
+    document.getElementById('chatbot').classList.toggle('chatbot-panel-open', isOpen);
     if (isOpen) input.focus();
-  });
+  }
 
-  close.addEventListener('click', () => {
-    isOpen = false;
-    panel.classList.add('hidden');
-    toggle.style.display = 'flex';
-  });
+  toggle.addEventListener('click', () => togglePanel(true));
+  close.addEventListener('click', () => togglePanel(false));
 
   async function sendMessage() {
     const text = input.value.trim();
