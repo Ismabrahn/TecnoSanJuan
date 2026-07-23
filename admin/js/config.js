@@ -8,7 +8,7 @@ export const MODULES = [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
       { key: 'slogan', label: 'Slogan', type: 'text' },
       { key: 'description', label: 'Descripción', type: 'textarea' },
-      { key: 'logo_url', label: 'URL del Logo', type: 'url' },
+      { key: 'logo_url', label: 'Logo', type: 'file' },
       { key: 'primary_color', label: 'Color Primario', type: 'color' },
       { key: 'secondary_color', label: 'Color Secundario', type: 'color' },
     ],
@@ -22,6 +22,7 @@ export const MODULES = [
       { key: 'description', label: 'Descripción', type: 'text' },
       { key: 'icon', label: 'Icono', type: 'text' },
       { key: 'sort_order', label: 'Orden', type: 'number' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -33,6 +34,7 @@ export const MODULES = [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
       { key: 'description', label: 'Descripción', type: 'textarea' },
       { key: 'price', label: 'Precio', type: 'number', step: '0.01' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -44,6 +46,7 @@ export const MODULES = [
       { key: 'label', label: 'Etiqueta', type: 'text' },
       { key: 'amount', label: 'Monto', type: 'number', required: true, step: '0.01' },
       { key: 'currency', label: 'Moneda', type: 'select', options: ['ARS', 'USD'] },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -60,6 +63,7 @@ export const MODULES = [
       { key: 'discount_value', label: 'Valor de Descuento', type: 'number', step: '0.01' },
       { key: 'valid_from', label: 'Válido Desde', type: 'date' },
       { key: 'valid_until', label: 'Válido Hasta', type: 'date' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -84,6 +88,7 @@ export const MODULES = [
       { key: 'colors', label: 'Colores (separados por coma)', type: 'text' },
       { key: 'max_dimensions', label: 'Dimensiones Máximas', type: 'text' },
       { key: 'lead_time', label: 'Tiempo de Entrega', type: 'text' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -95,6 +100,7 @@ export const MODULES = [
       { key: 'answer', label: 'Respuesta', type: 'textarea', required: true },
       { key: 'category', label: 'Categoría', type: 'text' },
       { key: 'sort_order', label: 'Orden', type: 'number' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -127,6 +133,7 @@ export const MODULES = [
     fields: [
       { key: 'label', label: 'Etiqueta', type: 'text' },
       { key: 'number', label: 'Número', type: 'text', required: true },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
@@ -167,6 +174,7 @@ export const MODULES = [
       { key: 'label', label: 'Etiqueta', type: 'text' },
       { key: 'email', label: 'Correo', type: 'email', required: true },
       { key: 'sort_order', label: 'Orden', type: 'number' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
