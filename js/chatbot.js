@@ -1,7 +1,12 @@
 import { $, createElement } from './utils.js';
 import { fetchChat } from './api.js';
 
+let initialized = false;
+
 export function initChatbot() {
+  if (initialized) return;
+  initialized = true;
+
   const toggle = $('#chatbotToggle');
   const panel = $('#chatbotPanel');
   const close = $('#chatbotClose');
