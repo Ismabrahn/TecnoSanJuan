@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mod.custom && mod.render) {
       toolbar.innerHTML = '';
-      contentArea.innerHTML = '<div class="empty-state">Cargando mÃ³dulo...</div>';
+      contentArea.innerHTML = '<div class="empty-state">Cargando módulo...</div>';
       try {
         await mod.render(contentArea);
       } catch (err) {
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await adminCreate(mod.id, formData);
           }
 
-          btn.textContent = 'âœ“ Guardado';
+          btn.textContent = '✓ Guardado';
           setTimeout(() => { btn.disabled = false; btn.textContent = 'Guardar'; }, 2000);
         } catch (err) {
           alert(`Error: ${err.message}`);
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Â¿EstÃ¡s seguro de eliminar este registro?')) return;
+    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
 
     try {
       await adminDelete(currentModule.id, id);

@@ -81,7 +81,7 @@ export function renderAiAssistant(container) {
       </div>
 
       <div class="ai-chat-input">
-        <textarea id="aiInstruction" placeholder="Ej: aumentÃ¡ todos los precios de servicios un 15%..." rows="2"></textarea>
+        <textarea id="aiInstruction" placeholder="Ej: aumentá todos los precios de servicios un 15%..." rows="2"></textarea>
         <button class="btn btn-primary" id="aiSendBtn">Enviar</button>
       </div>
     </div>
