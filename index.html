@@ -10,6 +10,24 @@
   <link rel="stylesheet" href="css/chatbot.css">
   <link rel="stylesheet" href="css/responsive.css">
   <script type="module" src="js/app.js" defer></script>
+  <script>
+    (function() {
+      fetch('https://tecno-san-juan-production.cuatrinismaelabrahan.workers.dev/api/public/chatbot-config')
+        .then(r => r.json())
+        .then(c => {
+          if (!c?.welcome_message) return;
+          const check = setInterval(() => {
+            const msgs = document.querySelectorAll('#chatbotMessages .message.bot');
+            if (msgs.length > 0) {
+              msgs[msgs.length - 1].textContent = c.welcome_message;
+              clearInterval(check);
+            }
+          }, 100);
+          setTimeout(() => clearInterval(check), 8000);
+        })
+        .catch(() => {});
+    })();
+  </script>
 </head>
 <body>
   <div id="app">
@@ -115,7 +133,6 @@
         <button id="chatbotClose" aria-label="Cerrar chat">&times;</button>
       </div>
       <div id="chatbotMessages" class="chatbot-messages"></div>
-      </div>
       <div class="chatbot-input">
         <input type="text" id="chatbotInput" placeholder="Escribí tu consulta..." maxlength="2000">
         <button id="chatbotSend" aria-label="Enviar">Enviar</button>
