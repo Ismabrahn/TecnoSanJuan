@@ -178,6 +178,19 @@ export const MODULES = [
     ],
   },
   {
+    id: 'products',
+    label: 'Productos',
+    icon: '📦',
+    fields: [
+      { key: 'name', label: 'Nombre', type: 'text', required: true },
+      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'price', label: 'Precio', type: 'number', step: '0.01' },
+      { key: 'category', label: 'Categoría', type: 'text' },
+      { key: 'features', label: 'Características (una por línea)', type: 'textarea' },
+      { key: 'image_url', label: 'Imagen', type: 'file' },
+    ],
+  },
+  {
     id: 'chatbot-config',
     label: 'Configuración del Chatbot',
     icon: '🤖',

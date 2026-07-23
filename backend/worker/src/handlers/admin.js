@@ -17,6 +17,7 @@ const RESOURCE_MAP = {
   'featured-messages': 'featured_messages',
   'hours': 'hours',
   'emails': 'emails',
+  'products': 'products',
   'chatbot-config': 'chatbot_config',
 };
 
@@ -96,8 +97,8 @@ export async function handleAdminDelete(request, env, resource, id) {
   if (!table) return errorResponse(request, 404, 'Recurso no encontrado');
 
   try {
-    await update(env, table, id, { is_active: false }, true);
-    return new Response(JSON.stringify({ success: true }), {
+    const deleted = await remove(env, table, id, true);
+    return new Response(JSON.stringify(deleted), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
@@ -110,6 +111,7 @@ function sanitizeObject(obj) {
   const result = {};
   for (const [key, value] of Object.entries(obj)) {
     if (key === 'id' || key === 'created_at' || key === 'updated_at') continue;
+    if (value === null || value === undefined || value === '') continue;
     if (typeof value === 'string') {
       result[key] = sanitize(value);
     } else {

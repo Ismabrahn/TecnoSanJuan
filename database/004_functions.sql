@@ -19,7 +19,7 @@ DECLARE
   tables_with_updated_at TEXT[] := ARRAY[
     'business_info', 'categories', 'services', 'prices', 'promotions',
     'warranties', 'print3d', 'faqs', 'address', 'featured_messages',
-    'hours', 'chatbot_config', 'clients', 'repairs', 'work_orders',
+    'hours', 'chatbot_config', 'products', 'clients', 'repairs', 'work_orders',
     'budgets', 'inventory', 'employees'
   ];
   t TEXT;
@@ -89,6 +89,12 @@ BEGIN
     FROM featured_messages fm
     WHERE fm.is_active AND (to_tsvector('spanish', fm.message) @@ plainto_tsquery('spanish', search_query))
   UNION ALL
+    SELECT 'products'::TEXT, p.id,
+           'Producto: ' || p.name || '. Precio: $' || p.price || '. Descripción: ' || p.description || '. Características: ' || p.features || '. Categoría: ' || p.category AS content,
+           ts_rank(to_tsvector('spanish', p.name || ' ' || p.description || ' ' || p.features || ' ' || p.category), plainto_tsquery('spanish', search_query)) AS relevance
+    FROM products p
+    WHERE p.is_active AND (to_tsvector('spanish', p.name || ' ' || p.description || ' ' || p.features || ' ' || p.category) @@ plainto_tsquery('spanish', search_query))
+  UNION ALL
     SELECT 'business_info'::TEXT, bi.id,
            bi.name || '. ' || COALESCE(bi.slogan, '') || '. ' || COALESCE(bi.description, ''),
            ts_rank(to_tsvector('spanish', bi.name || ' ' || COALESCE(bi.slogan, '') || ' ' || COALESCE(bi.description, '')), plainto_tsquery('spanish', search_query))
@@ -150,6 +156,11 @@ BEGIN
   result := result || COALESCE(
     (SELECT string_agg(h.day_name || ': ' || CASE WHEN h.is_closed THEN 'Cerrado' ELSE h.open_time::text || ' - ' || h.close_time::text END, E'\n' ORDER BY h.day_of_week)
      FROM hours h WHERE h.is_active), 'Sin horarios');
+
+  result := result || E'\n\nPRODUCTOS EN VENTA:\n';
+  result := result || COALESCE(
+    (SELECT string_agg('- ' || p.name || ' ($' || p.price::text || ') - ' || p.description, E'\n')
+     FROM products p WHERE p.is_active), 'Sin productos');
 
   result := result || E'\n\nPROMOCIONES:\n';
   result := result || COALESCE(

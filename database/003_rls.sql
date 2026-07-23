@@ -135,6 +135,13 @@ DROP POLICY IF EXISTS "Escritura administradores" ON chatbot_config;
 CREATE POLICY "Lectura pública" ON chatbot_config FOR SELECT USING (is_active = true);
 CREATE POLICY "Escritura administradores" ON chatbot_config FOR ALL USING (auth.role() = 'authenticated');
 
+-- products (pública - solo activos)
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura pública" ON products;
+DROP POLICY IF EXISTS "Escritura administradores" ON products;
+CREATE POLICY "Lectura pública" ON products FOR SELECT USING (is_active = true);
+CREATE POLICY "Escritura administradores" ON products FOR ALL USING (auth.role() = 'authenticated');
+
 -- ============================================================================
 -- 2. TABLAS PRIVADAS - Solo authenticated (lectura y escritura)
 -- ============================================================================

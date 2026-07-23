@@ -441,6 +441,116 @@ body {
   font-size: 0.875rem;
 }
 
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 0 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.product-card h3 {
+  font-size: 1rem;
+  margin: 0 12px 4px;
+  color: var(--text);
+}
+
+.product-category {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin: 0 12px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.product-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 4px 12px 0;
+}
+
+.product-detail-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.product-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 24px;
+  background: white;
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+}
+
+.product-detail-image img {
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.product-detail-info h2 {
+  font-size: 1.75rem;
+  margin-bottom: 8px;
+}
+
+.product-price-large {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 16px 0;
+}
+
+.product-detail-desc {
+  color: var(--text-light);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.product-features {
+  list-style: none;
+  padding: 0;
+}
+
+.product-features li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.product-features li::before {
+  content: '✓';
+  color: var(--success);
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+#productBackBtn {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .product-detail {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .menu-toggle {
     display: block;
@@ -471,6 +581,7 @@ body {
   }
 
   .categories-grid,
+  .products-grid,
   .promotions-grid,
   .print3d-grid {
     grid-template-columns: 1fr;

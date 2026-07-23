@@ -64,6 +64,15 @@ CREATE INDEX IF NOT EXISTS idx_services_name ON services USING gin (name gin_trg
 CREATE INDEX IF NOT EXISTS idx_clients_name ON clients USING gin (name gin_trgm_ops);
 
 -- --------------------------------------------------------------------------
+-- Índices para productos
+-- --------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_products_search
+  ON products USING GIN (to_tsvector('spanish', name || ' ' || description || ' ' || features || ' ' || category))
+  WHERE is_active = true;
+
+-- --------------------------------------------------------------------------
 -- Índices para tablas futuras
 -- --------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_repairs_status ON repairs(status);

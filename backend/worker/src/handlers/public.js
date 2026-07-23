@@ -14,7 +14,9 @@ const PUBLIC_TABLES = {
   'phones': { table: 'phones' },
   'address': { table: 'address', single: true },
   'featured-messages': { table: 'featured_messages', order: 'sort_order.asc' },
+  'hours': { table: 'hours', order: 'day_of_week.asc' },
   'emails': { table: 'emails', order: 'sort_order.asc' },
+  'products': { table: 'products', order: 'id.asc' },
   'chatbot-config': { table: 'chatbot_config', single: true },
 };
 
