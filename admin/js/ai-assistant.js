@@ -83,8 +83,8 @@ export function renderAiAssistant(container) {
     <div class="ai-chat">
       <div class="ai-header">
         <div class="ai-header-info">
-          <h3>&#x1F916; Compa IA</h3>
-          <p>Preguntame o decime que hacer, soy tu compañera</p>
+          <h3>&#x2728; Nexus</h3>
+          <p>Tu compañera IA con toda la energia positiva! Como vas?</p>
         </div>
         <span class="ai-status">conectada</span>
       </div>
@@ -92,8 +92,8 @@ export function renderAiAssistant(container) {
       <div class="ai-messages" id="aiMessages">
         <div class="ai-empty" id="aiEmpty">
           <div class="big-icon">&#x1F916;</div>
-          <p><strong>Holis! Soy tu compa IA</strong></p>
-          <p style="font-size:13px">Podes pedirme cosas o preguntarme lo que quieras</p>
+          <p><strong>Holis! Soy Nexus &#x2728;</strong></p>
+          <p style="font-size:13px">Tu compa IA con re pila! Pregunta, pedi, lo que necesites!</p>
           <div class="ai-ejemplos">
             <div class="cat-label">--- Consultas ---</div>
             <button data-ejemplo="Que productos tenemos en el catalogo?">Que vendemos?</button>
@@ -110,7 +110,7 @@ export function renderAiAssistant(container) {
       </div>
 
       <div class="ai-input-area">
-        <input id="aiInput" placeholder="Ej: subime los precios 15%, o preguntame algo..." />
+        <input id="aiInput" placeholder="Dale! Que necesitas? Pasame la data!" />
         <button id="aiSendBtn">Enviar</button>
       </div>
     </div>
