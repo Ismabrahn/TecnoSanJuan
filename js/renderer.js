@@ -262,11 +262,14 @@ export function renderProducts(products) {
   });
 }
 
+let scrollPos = 0;
+
 export function showProductDetail(product) {
   const grid = $('#productsContainer');
   const detail = $('#productDetailContainer');
   if (!detail || !grid) return;
 
+  scrollPos = window.scrollY;
   grid.style.display = 'none';
   detail.style.display = 'block';
 
@@ -291,6 +294,7 @@ export function showProductDetail(product) {
   $('#productBackBtn').addEventListener('click', () => {
     detail.style.display = 'none';
     grid.style.display = '';
+    window.scrollTo(0, scrollPos);
   });
 }
 
