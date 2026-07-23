@@ -4,7 +4,7 @@ import { initChatbot } from './chatbot.js';
 import { $ } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  initChatbot();
+  await initChatbot();
 
   const menuToggle = $('#menuToggle');
   const mainNav = $('#mainNav');
