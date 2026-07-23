@@ -81,6 +81,72 @@ export class FormBuilder {
         checkLabel.textContent = field.label;
         checkboxGroup.appendChild(checkLabel);
         group.appendChild(checkboxGroup);
+      } else if (field.type === 'file') {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.gap = '8px';
+        const preview = document.createElement('img');
+        preview.style.maxWidth = '200px';
+        preview.style.maxHeight = '150px';
+        preview.style.borderRadius = '8px';
+        preview.style.objectFit = 'cover';
+        preview.style.border = '1px solid var(--border)';
+        if (value) {
+          preview.src = value;
+          preview.style.display = 'block';
+        } else {
+          preview.style.display = 'none';
+        }
+        wrapper.appendChild(preview);
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.id = `field-${field.key}`;
+        input.name = field.key;
+        input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          const btn = input.nextElementSibling;
+          if (btn) btn.disabled = true;
+          try {
+            const { getSession } = await import('../auth.js');
+            const session = getSession();
+            if (!session) throw new Error('No autenticado');
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch('https://tecno-san-juan-production.cuatrinismaelabrahan.workers.dev/api/admin/upload', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${session.access_token}` },
+              body: formData,
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            preview.src = data.url;
+            preview.style.display = 'block';
+            const hidden = wrapper.querySelector('input[type="hidden"]');
+            if (hidden) hidden.value = data.url;
+          } catch (err) {
+            alert('Error al subir imagen: ' + err.message);
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        });
+        input.style.display = 'none';
+        wrapper.appendChild(input);
+        const uploadBtn = document.createElement('button');
+        uploadBtn.type = 'button';
+        uploadBtn.className = 'btn btn-sm btn-outline';
+        uploadBtn.textContent = value ? 'Cambiar imagen' : 'Subir imagen';
+        uploadBtn.addEventListener('click', () => input.click());
+        wrapper.appendChild(uploadBtn);
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = field.key;
+        hidden.id = `hidden-${field.key}`;
+        hidden.value = value || '';
+        wrapper.appendChild(hidden);
+        group.appendChild(wrapper);
       } else if (field.type === 'color') {
         const wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
@@ -138,6 +204,9 @@ export class FormBuilder {
         data[field.key] = el.checked;
       } else if (field.type === 'number') {
         data[field.key] = el.value ? Number(el.value) : null;
+      } else if (field.type === 'file') {
+        const hidden = document.getElementById(`hidden-${field.key}`);
+        data[field.key] = hidden ? hidden.value : null;
       } else {
         data[field.key] = el.value || null;
       }
