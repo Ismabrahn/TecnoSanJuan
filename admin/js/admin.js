@@ -59,7 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
     currentModule = mod;
     pageTitle.textContent = mod.label;
 
-    if (mod.single) {
+    if (mod.custom && mod.render) {
+      toolbar.innerHTML = '';
+      contentArea.innerHTML = '';
+      await mod.render(contentArea);
+    } else if (mod.single) {
       await loadSingleModule(mod);
     } else {
       await loadListModule(mod);
@@ -135,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await adminCreate(mod.id, formData);
           }
 
-          btn.textContent = '✓ Guardado';
+          btn.textContent = 'âœ“ Guardado';
           setTimeout(() => { btn.disabled = false; btn.textContent = 'Guardar'; }, 2000);
         } catch (err) {
           alert(`Error: ${err.message}`);
@@ -222,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function handleDelete(id) {
-    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
+    if (!confirm('Â¿EstÃ¡s seguro de eliminar este registro?')) return;
 
     try {
       await adminDelete(currentModule.id, id);

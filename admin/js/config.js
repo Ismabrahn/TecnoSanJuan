@@ -1,13 +1,13 @@
 export const MODULES = [
   {
     id: 'business-info',
-    label: 'Información del Negocio',
-    icon: '🏪',
+    label: 'InformaciÃ³n del Negocio',
+    icon: 'ðŸª',
     single: true,
     fields: [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
       { key: 'slogan', label: 'Slogan', type: 'text' },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
       { key: 'logo_url', label: 'Logo', type: 'file' },
       { key: 'primary_color', label: 'Color Primario', type: 'color' },
       { key: 'secondary_color', label: 'Color Secundario', type: 'color' },
@@ -15,11 +15,11 @@ export const MODULES = [
   },
   {
     id: 'categories',
-    label: 'Categorías',
-    icon: '📂',
+    label: 'CategorÃ­as',
+    icon: 'ðŸ“‚',
     fields: [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'text' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'text' },
       { key: 'icon', label: 'Icono', type: 'text' },
       { key: 'sort_order', label: 'Orden', type: 'number' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
@@ -28,11 +28,11 @@ export const MODULES = [
   {
     id: 'services',
     label: 'Servicios',
-    icon: '🔧',
+    icon: 'ðŸ”§',
     fields: [
-      { key: 'category_id', label: 'Categoría', type: 'select', reference: 'categories' },
+      { key: 'category_id', label: 'CategorÃ­a', type: 'select', reference: 'categories' },
       { key: 'name', label: 'Nombre', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
       { key: 'price', label: 'Precio', type: 'number', step: '0.01' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
@@ -40,7 +40,7 @@ export const MODULES = [
   {
     id: 'prices',
     label: 'Precios',
-    icon: '💰',
+    icon: 'ðŸ’°',
     fields: [
       { key: 'service_id', label: 'Servicio', type: 'select', reference: 'services' },
       { key: 'label', label: 'Etiqueta', type: 'text' },
@@ -52,41 +52,41 @@ export const MODULES = [
   {
     id: 'promotions',
     label: 'Promociones',
-    icon: '🏷️',
+    icon: 'ðŸ·ï¸',
     fields: [
-      { key: 'title', label: 'Título', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'title', label: 'TÃ­tulo', type: 'text', required: true },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
       {
         key: 'discount_type', label: 'Tipo de Descuento', type: 'select',
         options: ['percentage', 'fixed'],
       },
       { key: 'discount_value', label: 'Valor de Descuento', type: 'number', step: '0.01' },
-      { key: 'valid_from', label: 'Válido Desde', type: 'date' },
-      { key: 'valid_until', label: 'Válido Hasta', type: 'date' },
+      { key: 'valid_from', label: 'VÃ¡lido Desde', type: 'date' },
+      { key: 'valid_until', label: 'VÃ¡lido Hasta', type: 'date' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
     id: 'warranties',
-    label: 'Garantías',
-    icon: '🛡️',
+    label: 'GarantÃ­as',
+    icon: 'ðŸ›¡ï¸',
     fields: [
-      { key: 'title', label: 'Título', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
-      { key: 'duration', label: 'Duración', type: 'text' },
-      { key: 'terms', label: 'Términos', type: 'textarea' },
+      { key: 'title', label: 'TÃ­tulo', type: 'text', required: true },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
+      { key: 'duration', label: 'DuraciÃ³n', type: 'text' },
+      { key: 'terms', label: 'TÃ©rminos', type: 'textarea' },
     ],
   },
   {
     id: 'print3d',
-    label: 'Impresión 3D',
-    icon: '🖨️',
+    label: 'ImpresiÃ³n 3D',
+    icon: 'ðŸ–¨ï¸',
     fields: [
       { key: 'material', label: 'Material', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
       { key: 'price_per_gram', label: 'Precio por Gramo', type: 'number', step: '0.01' },
       { key: 'colors', label: 'Colores (separados por coma)', type: 'text' },
-      { key: 'max_dimensions', label: 'Dimensiones Máximas', type: 'text' },
+      { key: 'max_dimensions', label: 'Dimensiones MÃ¡ximas', type: 'text' },
       { key: 'lead_time', label: 'Tiempo de Entrega', type: 'text' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
@@ -94,11 +94,11 @@ export const MODULES = [
   {
     id: 'faqs',
     label: 'Preguntas Frecuentes',
-    icon: '❓',
+    icon: 'â“',
     fields: [
       { key: 'question', label: 'Pregunta', type: 'textarea', required: true },
       { key: 'answer', label: 'Respuesta', type: 'textarea', required: true },
-      { key: 'category', label: 'Categoría', type: 'text' },
+      { key: 'category', label: 'CategorÃ­a', type: 'text' },
       { key: 'sort_order', label: 'Orden', type: 'number' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
@@ -106,10 +106,10 @@ export const MODULES = [
   {
     id: 'hours',
     label: 'Horarios',
-    icon: '🕐',
+    icon: 'ðŸ•',
     fields: [
-      { key: 'day_of_week', label: 'Día (0-6)', type: 'number', required: true },
-      { key: 'day_name', label: 'Nombre del Día', type: 'text', required: true },
+      { key: 'day_of_week', label: 'DÃ­a (0-6)', type: 'number', required: true },
+      { key: 'day_name', label: 'Nombre del DÃ­a', type: 'text', required: true },
       { key: 'open_time', label: 'Apertura', type: 'time' },
       { key: 'close_time', label: 'Cierre', type: 'time' },
       { key: 'is_closed', label: 'Cerrado', type: 'checkbox' },
@@ -118,7 +118,7 @@ export const MODULES = [
   {
     id: 'social-media',
     label: 'Redes Sociales',
-    icon: '📱',
+    icon: 'ðŸ“±',
     fields: [
       { key: 'platform', label: 'Plataforma', type: 'text', required: true },
       { key: 'url', label: 'URL', type: 'url', required: true },
@@ -128,25 +128,25 @@ export const MODULES = [
   },
   {
     id: 'phones',
-    label: 'Teléfonos',
-    icon: '📞',
+    label: 'TelÃ©fonos',
+    icon: 'ðŸ“ž',
     fields: [
       { key: 'label', label: 'Etiqueta', type: 'text' },
-      { key: 'number', label: 'Número', type: 'text', required: true },
+      { key: 'number', label: 'NÃºmero', type: 'text', required: true },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
     id: 'address',
-    label: 'Dirección',
-    icon: '📍',
+    label: 'DirecciÃ³n',
+    icon: 'ðŸ“',
     single: true,
     fields: [
       { key: 'street', label: 'Calle', type: 'text', required: true },
-      { key: 'number', label: 'Número', type: 'text' },
+      { key: 'number', label: 'NÃºmero', type: 'text' },
       { key: 'city', label: 'Ciudad', type: 'text', required: true },
       { key: 'province', label: 'Provincia', type: 'text', required: true },
-      { key: 'postal_code', label: 'Código Postal', type: 'text' },
+      { key: 'postal_code', label: 'CÃ³digo Postal', type: 'text' },
       { key: 'latitude', label: 'Latitud', type: 'number', step: '0.0000001' },
       { key: 'longitude', label: 'Longitud', type: 'number', step: '0.0000001' },
       { key: 'maps_url', label: 'URL de Google Maps', type: 'url' },
@@ -156,7 +156,7 @@ export const MODULES = [
   {
     id: 'featured-messages',
     label: 'Mensajes Destacados',
-    icon: '📢',
+    icon: 'ðŸ“¢',
     fields: [
       { key: 'message', label: 'Mensaje', type: 'textarea', required: true },
       {
@@ -168,8 +168,8 @@ export const MODULES = [
   },
   {
     id: 'emails',
-    label: 'Correos Electrónicos',
-    icon: '📧',
+    label: 'Correos ElectrÃ³nicos',
+    icon: 'ðŸ“§',
     fields: [
       { key: 'label', label: 'Etiqueta', type: 'text' },
       { key: 'email', label: 'Correo', type: 'email', required: true },
@@ -180,27 +180,37 @@ export const MODULES = [
   {
     id: 'products',
     label: 'Productos',
-    icon: '📦',
+    icon: 'ðŸ“¦',
     fields: [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
-      { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'textarea' },
       { key: 'price', label: 'Precio', type: 'number', step: '0.01' },
-      { key: 'category', label: 'Categoría', type: 'text' },
-      { key: 'features', label: 'Características (una por línea)', type: 'textarea' },
+      { key: 'category', label: 'CategorÃ­a', type: 'text' },
+      { key: 'features', label: 'CaracterÃ­sticas (una por lÃ­nea)', type: 'textarea' },
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
   {
+    id: 'ai-assistant',
+    label: 'Asistente IA',
+    icon: 'ðŸ¤–',
+    custom: true,
+    render: async (container) => {
+      const { renderAiAssistant } = await import('./ai-assistant.js');
+      renderAiAssistant(container);
+    },
+  },
+  {
     id: 'chatbot-config',
-    label: 'Configuración del Chatbot',
-    icon: '🤖',
+    label: 'ConfiguraciÃ³n del Chatbot',
+    icon: 'ðŸ¤–',
     single: true,
     fields: [
       { key: 'welcome_message', label: 'Mensaje de Bienvenida', type: 'textarea' },
       { key: 'system_prompt', label: 'Prompt del Sistema', type: 'textarea' },
       { key: 'fallback_message', label: 'Mensaje por Defecto', type: 'textarea' },
       { key: 'temperature', label: 'Temperatura (0-2)', type: 'number', step: '0.01' },
-      { key: 'max_tokens', label: 'Máximo de Tokens', type: 'number' },
+      { key: 'max_tokens', label: 'MÃ¡ximo de Tokens', type: 'number' },
     ],
   },
 ];
