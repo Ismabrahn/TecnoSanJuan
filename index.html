@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tecno San Juan - Reparación de celulares, PC, venta de accesorios e impresión 3D">
+  <title>Tecno San Juan</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script type="module" src="js/app.js" defer></script>
+  <script>
+    (function() {
+      const API = 'https://tecno-san-juan-production.cuatrinismaelabrahan.workers.dev/api/public';
+      fetch(API + '/chatbot-config')
+        .then(r => r.json())
+        .then(c => {
+          if (!c?.welcome_message) return;
+          const check = setInterval(() => {
+            const msgs = document.querySelectorAll('#chatbotMessages .message.bot');
+            if (msgs.length > 0) {
+              msgs[msgs.length - 1].textContent = c.welcome_message;
+              clearInterval(check);
+            }
+          }, 100);
+          setTimeout(() => clearInterval(check), 8000);
+        })
+        .catch(() => {});
+      fetch(API + '/phones')
+        .then(r => r.json())
+        .then(phones => {
+          if (!phones || phones.length === 0) return;
+          const whatsapp = phones.find(p => p.label && p.label.toLowerCase().includes('whatsapp')) || phones[0];
+          if (whatsapp) {
+            const link = document.getElementById('heroWhatsApp');
+            if (link) link.href = 'https://wa.me/' + whatsapp.number.replace(/[^0-9]/g, '');
+          }
+        })
+        .catch(() => {});
+    })();
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <div class="container header-inner">
+        <a href="#" class="logo" id="logo-link">
+          <span id="logo-text">Tecno San Juan</span>
+        </a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Menú">
+          <span></span><span></span><span></span>
+        </button>
+        <nav id="mainNav">
+          <ul>
+            <li><a href="#products">Productos</a></li>
+            <li><a href="#services">Servicios</a></li>
+            <li><a href="#promotions">Promociones</a></li>
+            <li><a href="#print3d">Impresión 3D</a></li>
+            <li><a href="#faqs">FAQ</a></li>
+            <li><a href="#contact">Contacto</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <section id="hero">
+      <div class="container hero-inner">
+        <h1 id="hero-title">Tecno San Juan</h1>
+        <p id="hero-slogan">Soluciones tecnológicas a tu alcance</p>
+                <p id="hero-description">Reparación de equipos, venta de accesorios e impresión 3D en San Juan</p>
+        
+      </div>
+    </section>
+
+    <section id="featured-messages" class="section">
+      <div class="container">
+        <div id="messagesContainer"></div>
+      </div>
+    </section>
+
+    <section id="services" class="section">
+      <div class="container">
+        <h2 class="section-title">Servicios</h2>
+        <div id="categoriesContainer" class="categories-grid"></div>
+      </div>
+    </section>
+
+    <section id="products" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Productos</h2>
+        <div id="productsContainer" class="products-grid"></div>
+        <div id="productDetailContainer" class="product-detail-container" style="display:none"></div>
+      </div>
+    </section>
+
+    <section id="promotions" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Promociones</h2>
+        <div id="promotionsContainer" class="promotions-grid"></div>
+      </div>
+    </section>
+
+    <section id="print3d" class="section">
+      <div class="container">
+        <h2 class="section-title">Impresión 3D</h2>
+        <div id="print3dContainer" class="print3d-grid"></div>
+      </div>
+    </section>
+
+    <section id="faqs" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title">Preguntas Frecuentes</h2>
+        <div id="faqsContainer" class="faqs-list"></div>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <div class="container">
+        <h2 class="section-title">Contacto</h2>
+        <div class="contact-grid">
+          <div id="contactInfo" class="contact-info"></div>
+          <div id="contactPhones" class="contact-phones"></div>
+          <div id="socialMedia" class="social-media"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer id="footer">
+      <div class="container">
+        <div class="footer-inner">
+          <div id="footerHours" class="footer-hours"></div>
+          <div id="footerInfo" class="footer-info"></div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2026 <span id="footerName">Tecno San Juan</span>. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="chatbot" class="chatbot">
+    <span class="chatbot-label" id="chatbotLabel">Consultá con IA 💬</span>
+    <button id="chatbotToggle" class="chatbot-toggle" aria-label="Abrir chat">
+      <svg class="chatbot-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <circle cx="9" cy="10" r=".5" fill="currentColor"/>
+        <circle cx="12" cy="10" r=".5" fill="currentColor"/>
+        <circle cx="15" cy="10" r=".5" fill="currentColor"/>
+      </svg>
+    </button>
+    <div id="chatbotPanel" class="chatbot-panel hidden">
+      <div class="chatbot-header">
+        <h3>Chat Tecno San Juan</h3>
+        <button id="chatbotClose" aria-label="Cerrar chat">&times;</button>
+      </div>
+      <div id="chatbotMessages" class="chatbot-messages"></div>
+      <div class="chatbot-input">
+        <input type="text" id="chatbotInput" placeholder="Escribí tu consulta..." maxlength="2000">
+        <button id="chatbotSend" aria-label="Enviar">Enviar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

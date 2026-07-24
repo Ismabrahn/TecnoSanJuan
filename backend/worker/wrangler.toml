@@ -1,0 +1,22 @@
+name = "tecno-san-juan"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI"
+OPENROUTER_MODEL = "openai/gpt-4o-mini"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
+SITE_URL = "https://tecnosanjuan.com"
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+[vars]
+SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI"
+OPENROUTER_MODEL = "openai/gpt-4o-mini"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
+SITE_URL = "https://tecnosanjuan.com"

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin - Tecno San Juan</title>
+  <link rel="stylesheet" href="css/admin.css?v=4">
+  <script type="module" src="js/admin.js?v=4" defer></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>Tecno San Juan</h1>
+        <p>Panel de Administración</p>
+      </div>
+      <nav class="sidebar-nav" id="sidebarNav"></nav>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-hamburger" id="hamburgerBtn" aria-label="Abrir menú">
+            <span></span><span></span><span></span>
+          </button>
+          <h2 id="pageTitle">Información del Negocio</h2>
+        </div>
+        <div class="topbar-actions">
+          <span id="currentUser"></span>
+          <button class="btn btn-outline btn-sm" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="toolbar" class="toolbar"></div>
+        <div id="contentArea"></div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
