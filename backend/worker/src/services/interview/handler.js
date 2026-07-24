@@ -1,10 +1,25 @@
 import { chat } from '../openrouter.js';
 import { getEngine, getDefinition } from './definitions.js';
 
-const SYSTEM_QUESTION = 'Generá UNA SOLA pregunta en argentino, natural y conversacional, para obtener la información del cliente. No expliques nada, no saludes, no te presentes, no hagas introducciones, no des información técnica. Respondé únicamente la pregunta, nada más.';
+const SYSTEM_QUESTION = 'Generá UNA SOLA pregunta en argentino, natural, con empatía y conversacional, para obtener la información del cliente. Incluí una breve explicación de por qué se necesita ese dato (una o dos líneas máximo, como lo haría un empleado al tomar un pedido). No saludes, no te presentes, no hagas introducciones, no des información técnica extensa. Respondé únicamente la pregunta con su breve contexto, nada más.';
+
+const FIELD_CONTEXT = {
+  nombre: 'Necesitamos tu nombre para registrar el pedido.',
+  pieza: 'Esto nos ayuda a estimar el tiempo de impresión, el material y la complejidad del trabajo.',
+  archivo: 'Si ya tenés el archivo podemos calcular el presupuesto mucho más rápido.',
+  requiere_diseno: 'Si no tenés el archivo, nosotros podemos diseñarlo por vos.',
+  medidas: 'Las medidas nos permiten calcular el material necesario y el costo.',
+  cantidad: 'La cantidad influye en el precio final y el tiempo de entrega.',
+  material: 'Cada material tiene distintas propiedades y precios.',
+  color: 'Para preparar el material del color correcto.',
+  uso: 'El uso nos ayuda a recomendar el material y diseño más adecuado.',
+  fecha_limite: 'Para organizar la producción y asegurarnos de cumplir con los tiempos.',
+  observaciones: 'Cualquier detalle extra que debamos conocer antes de empezar.',
+};
 
 function buildQuestionMessages(field, currentValues) {
-  const preamble = `Campo a obtener: "${field.label}"${field.required ? ' (obligatorio)' : ' (opcional)'}`;
+  const contexto = FIELD_CONTEXT[field.name] || '';
+  const preamble = `Campo a obtener: "${field.label}"${field.required ? ' (obligatorio)' : ' (opcional)'}. ${contexto}`;
   const known = Object.entries(currentValues)
     .filter(([, v]) => v !== null && v !== '---')
     .map(([k, v]) => `${k}: ${v}`)
@@ -17,10 +32,10 @@ function buildQuestionMessages(field, currentValues) {
 }
 
 function buildStructuredSummary(def, state) {
-  return def.fields
+  const lines = def.fields
     .filter(f => state[f.name] !== null && state[f.name] !== '---')
-    .map(f => `${f.label}: ${state[f.name]}`)
-    .join('\n');
+    .map(f => `${f.summaryLabel || f.label}: ${state[f.name]}`);
+  return '------------------------------------\nSOLICITUD DE IMPRESIÓN 3D\n' + lines.join('\n') + '\n------------------------------------';
 }
 
 export async function handleInterview(env, interview, userMessage) {

@@ -39,7 +39,7 @@ export async function initChatbot() {
   close.addEventListener('click', () => togglePanel(false));
 
   function addQuoteWhatsApp(summary, phone) {
-    const msg = encodeURIComponent('Hola, quiero solicitar el siguiente presupuesto:\n\n' + summary);
+    const msg = encodeURIComponent(summary);
     const waUrl = `https://wa.me/${phone}?text=${msg}`;
     const btn = createElement('a', { className: 'whatsapp-quote-btn', href: waUrl, target: '_blank', textContent: 'Enviar por WhatsApp' });
     messages.appendChild(btn);
@@ -65,9 +65,8 @@ export async function initChatbot() {
         interviewState = data.interview;
         addMessage(data.response, 'bot', 'ai');
         if (data.interview.complete) {
-          const summary = buildSummaryText(data.interview.state);
           if (data.phone) phoneNumber = data.phone;
-          addQuoteWhatsApp(summary, data.phone || phoneNumber);
+          addQuoteWhatsApp(data.response, data.phone || phoneNumber);
         }
       } else {
         addMessage(data.response, 'bot', data.source);
@@ -79,19 +78,6 @@ export async function initChatbot() {
       send.disabled = false;
       if (!input.disabled) input.focus();
     }
-  }
-
-  function buildSummaryText(state) {
-    const labels = {
-      pieza: 'Pieza', archivo: 'Tiene archivo', requiere_diseno: 'Requiere diseño',
-      medidas: 'Medidas', cantidad: 'Cantidad', material: 'Material',
-      color: 'Color', uso: 'Uso previsto', fecha_limite: 'Fecha límite',
-      observaciones: 'Observaciones',
-    };
-    return Object.entries(state)
-      .filter(([k, v]) => k !== 'finalizada' && v !== null && v !== '---')
-      .map(([k, v]) => `${labels[k] || k}: ${v}`)
-      .join('\n');
   }
 
   send.addEventListener('click', sendMessage);
