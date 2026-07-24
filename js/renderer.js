@@ -114,33 +114,32 @@ export function renderPrint3d(printData) {
 
   if (!printData || printData.length === 0) {
     container.innerHTML = '<p class="empty">No hay servicios de impresión 3D disponibles.</p>';
-    return;
+  } else {
+    printData.forEach(item => {
+      const children = [
+        item.image_url && createElement('img', {
+          src: item.image_url, alt: item.material,
+          style: 'width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:8px',
+        }),
+        createElement('h3', { textContent: item.material }),
+        item.description && createElement('p', { textContent: item.description }),
+        item.price_per_gram && createElement('p', {
+          textContent: `$${item.price_per_gram}/g`,
+        }),
+        item.colors && createElement('p', {
+          textContent: `Colores: ${item.colors}`,
+        }),
+        item.max_dimensions && createElement('p', {
+          textContent: `Dimensiones máximas: ${item.max_dimensions}`,
+        }),
+        item.lead_time && createElement('p', {
+          textContent: `Tiempo de entrega: ${item.lead_time}`,
+        }),
+      ].filter(Boolean);
+      const card = createElement('div', { className: 'print3d-card' }, children);
+      container.appendChild(card);
+    });
   }
-
-  printData.forEach(item => {
-    const children = [
-      item.image_url && createElement('img', {
-        src: item.image_url, alt: item.material,
-        style: 'width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:8px',
-      }),
-      createElement('h3', { textContent: item.material }),
-      item.description && createElement('p', { textContent: item.description }),
-      item.price_per_gram && createElement('p', {
-        textContent: `$${item.price_per_gram}/g`,
-      }),
-      item.colors && createElement('p', {
-        textContent: `Colores: ${item.colors}`,
-      }),
-      item.max_dimensions && createElement('p', {
-        textContent: `Dimensiones máximas: ${item.max_dimensions}`,
-      }),
-      item.lead_time && createElement('p', {
-        textContent: `Tiempo de entrega: ${item.lead_time}`,
-      }),
-    ].filter(Boolean);
-    const card = createElement('div', { className: 'print3d-card' }, children);
-    container.appendChild(card);
-  });
 
   const quoteBtn = createElement('button', {
     className: 'btn btn-primary',
