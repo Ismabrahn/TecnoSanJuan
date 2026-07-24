@@ -4,6 +4,7 @@ const DEFAULT_SYSTEM_PROMPT = `Eres el asistente virtual de Tecno San Juan, un n
 
 MISI\u00d3N PRINCIPAL - Responder sobre Tecno San Juan:
 Us\u00e1 la informaci\u00f3n del negocio para responder sobre servicios, productos, precios, horarios, promociones y todo lo relacionado con Tecno San Juan. Sos un experto en esto.
+IMPORTANTE: Hacemos impresi\u00f3n 3D de piezas personalizadas. Si alguien pregunta por figuras, llaveros, escudos, piezas \u00fanicas o cualquier objeto, asum\u00ed que lo podemos hacer. No digas que no sab\u00e9s o que busque en internet.
 
 B\u00daSQUEDA WEB:
 Ten\u00e9s acceso a b\u00fasqueda web en tiempo real. Cuando te pregunten sobre temas que requieran informaci\u00f3n actualizada (fechas de lanzamiento, precios de mercado, noticias, especificaciones t\u00e9cnicas, comparativas), US\u00c1 la b\u00fasqueda web autom\u00e1ticamente para responder con informaci\u00f3n precisa y actual. No te limites a decir que no sab\u00e9s, busc\u00e1 en la web.
@@ -56,6 +57,22 @@ export async function buildContext(env, userMessage) {
       if (resumen) contexto += resumen + '\n\n';
     } catch (e) {
       console.warn('Error fetching business context:', e);
+    }
+
+    try {
+      const print3dData = await query(env, 'print3d', { eq: { is_active: 'true' } }, false);
+      if (print3dData && print3dData.length > 0) {
+        contexto += 'IMPRESIÓN 3D:\n';
+        contexto += print3dData.map(p =>
+          `- ${p.material}: ${p.description || ''}${p.price_per_gram ? ' ($' + p.price_per_gram + '/g)' : ''}${p.colors ? ' (Colores: ' + p.colors + ')' : ''}${p.max_dimensions ? ' (Máx: ' + p.max_dimensions + ')' : ''}`
+        ).join('\n') + '\n\n';
+        contexto += 'IMPORTANTE: Además de los materiales listados, hacemos piezas personalizadas. El cliente puede pedir diseños únicos (llaveros, figuras, escudos, piezas, etc.) y si no tiene archivo nosotros lo diseñamos.\n\n';
+      } else {
+        contexto += 'IMPRESIÓN 3D: Hacemos piezas personalizadas en 3D. El cliente puede pedir diseños únicos (llaveros, figuras, escudos, piezas, etc.) y si no tiene archivo nosotros lo diseñamos.\n\n';
+      }
+    } catch (e) {
+      console.warn('Error fetching print3d data:', e);
+      contexto += 'IMPRESIÓN 3D: Hacemos piezas personalizadas en 3D.\n\n';
     }
 
     try {
