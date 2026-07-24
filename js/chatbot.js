@@ -130,9 +130,15 @@ export async function initChatbot() {
       messages.innerHTML = '';
       togglePanel(true);
 
-      addMessage('Decime que necesitas y te ayudo con todo.', 'bot');
-      send.disabled = false;
-      input.focus();
+      if (context === '3d_quote') {
+        input.value = '.';
+        send.disabled = false;
+        await sendMessage();
+      } else {
+        addMessage('Decime que necesitas y te ayudo con todo.', 'bot');
+        send.disabled = false;
+        input.focus();
+      }
     },
   };
 }
