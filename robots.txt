@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://ismabrahan.github.io/tecno-san-juan/sitemap.xml
