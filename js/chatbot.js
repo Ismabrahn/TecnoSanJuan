@@ -3,6 +3,7 @@ import { fetchChat, fetchPublic } from './api.js';
 
 let initialized = false;
 let currentContext = '';
+let interviewState = null;
 let phoneNumber = '';
 let chatbotApi = null;
 
@@ -30,17 +31,16 @@ export async function initChatbot() {
     panel.classList.toggle('hidden', !isOpen);
     toggle.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('chatbot').classList.toggle('chatbot-panel-open', isOpen);
-    if (!open) { currentContext = ''; input.disabled = false; }
+    if (!open) { currentContext = ''; interviewState = null; input.disabled = false; }
     if (isOpen) input.focus();
   }
 
   toggle.addEventListener('click', () => togglePanel(true));
   close.addEventListener('click', () => togglePanel(false));
 
-  function addQuoteWhatsApp(summary) {
-    const cleanSummary = summary.replace(/\[FIN_QUOTE\]/g, '').trim();
-    const msg = encodeURIComponent('Hola, quiero solicitar el siguiente presupuesto:\n\n' + cleanSummary);
-    const waUrl = `https://wa.me/${phoneNumber}?text=${msg}`;
+  function addQuoteWhatsApp(summary, phone) {
+    const msg = encodeURIComponent('Hola, quiero solicitar el siguiente presupuesto:\n\n' + summary);
+    const waUrl = `https://wa.me/${phone}?text=${msg}`;
     const btn = createElement('a', { className: 'whatsapp-quote-btn', href: waUrl, target: '_blank', textContent: 'Enviar por WhatsApp' });
     messages.appendChild(btn);
     messages.scrollTop = messages.scrollHeight;
@@ -59,14 +59,16 @@ export async function initChatbot() {
     const typing = addTypingIndicator();
 
     try {
-      const data = await fetchChat(text, currentContext);
+      const data = await fetchChat(text, currentContext, interviewState);
       typing.remove();
-      const finIndex = data.response.indexOf('[FIN_QUOTE]');
-      if (finIndex !== -1) {
-        const summary = data.response.substring(finIndex);
-        const mainText = data.response.substring(0, finIndex).trim();
-        if (mainText) addMessage(mainText, 'bot', data.source);
-        addQuoteWhatsApp(summary);
+      if (data.interview) {
+        interviewState = data.interview;
+        addMessage(data.response, 'bot', 'ai');
+        if (data.interview.complete) {
+          const summary = buildSummaryText(data.interview.state);
+          if (data.phone) phoneNumber = data.phone;
+          addQuoteWhatsApp(summary, data.phone || phoneNumber);
+        }
       } else {
         addMessage(data.response, 'bot', data.source);
       }
@@ -77,6 +79,19 @@ export async function initChatbot() {
       send.disabled = false;
       if (!input.disabled) input.focus();
     }
+  }
+
+  function buildSummaryText(state) {
+    const labels = {
+      pieza: 'Pieza', archivo: 'Tiene archivo', requiere_diseno: 'Requiere diseño',
+      medidas: 'Medidas', cantidad: 'Cantidad', material: 'Material',
+      color: 'Color', uso: 'Uso previsto', fecha_limite: 'Fecha límite',
+      observaciones: 'Observaciones',
+    };
+    return Object.entries(state)
+      .filter(([k, v]) => k !== 'finalizada' && v !== null && v !== '---')
+      .map(([k, v]) => `${labels[k] || k}: ${v}`)
+      .join('\n');
   }
 
   send.addEventListener('click', sendMessage);
@@ -127,6 +142,7 @@ export async function initChatbot() {
   chatbotApi = {
     async startChat(context) {
       currentContext = context;
+      interviewState = null;
       messages.innerHTML = '';
       togglePanel(true);
 
