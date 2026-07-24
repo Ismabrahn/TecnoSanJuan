@@ -206,27 +206,24 @@ export function renderHours(hours) {
       <span>${time}</span>
     </div>`;
   });
-
-  const footerInfo = $('#footerInfo');
-  if (footerInfo) {
-    footerInfo.innerHTML = '<h3>Ubicación</h3>';
-  }
 }
 
 export function renderAddress(address) {
   const container = $('#contactInfo');
   if (!container || !address) return;
 
-  container.innerHTML = '<h3>Dirección</h3>';
-  container.innerHTML += `<p>${address.street} ${address.number || ''}, ${address.city}, ${address.province}</p>`;
+  let html = '<h3>Dirección</h3>';
+  html += `<p>${address.street} ${address.number || ''}, ${address.city}, ${address.province}</p>`;
+  if (address.maps_url) {
+    html += `<p><a href="${address.maps_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;color:var(--primary);font-weight:600;text-decoration:none;margin-top:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Ver en Google Maps
+    </a></p>`;
+  }
   if (address.notes) {
-    container.innerHTML += `<p>${address.notes}</p>`;
+    html += `<p>${address.notes}</p>`;
   }
-
-  const footerInfo = $('#footerInfo');
-  if (footerInfo) {
-    footerInfo.innerHTML += `<p>${address.street} ${address.number || ''}, ${address.city}</p>`;
-  }
+  container.innerHTML = html;
 }
 
 export function renderProducts(products) {
