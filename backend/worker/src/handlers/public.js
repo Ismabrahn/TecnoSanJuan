@@ -27,7 +27,8 @@ export async function handlePublicGet(request, env, resource) {
   }
 
   try {
-    const options = { eq: { is_active: 'true' } };
+    const options = {};
+    if (!config.single) options.eq = { is_active: 'true' };
     if (config.order) options.order = config.order;
 
     const data = await query(env, config.table, options, false);
