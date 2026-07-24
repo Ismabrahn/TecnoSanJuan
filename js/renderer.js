@@ -140,6 +140,20 @@ export function renderPrint3d(printData) {
     const card = createElement('div', { className: 'print3d-card' }, children);
     container.appendChild(card);
   });
+
+  const quoteBtn = createElement('button', {
+    className: 'btn btn-primary',
+    id: 'print3dQuoteBtn',
+    textContent: 'Solicitar presupuesto con IA',
+    style: 'display:block;margin:24px auto 0;font-size:1rem;padding:14px 28px',
+  });
+  container.parentElement.appendChild(quoteBtn);
+
+  quoteBtn.addEventListener('click', () => {
+    import('./quote-chat.js').then(mod => {
+      mod.openQuoteChat({ context: '3d_quote', title: 'Presupuesto de Impresión 3D' });
+    });
+  });
 }
 
 export function renderFaqs(faqs) {

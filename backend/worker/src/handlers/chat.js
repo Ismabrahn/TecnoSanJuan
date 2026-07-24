@@ -1,6 +1,6 @@
 import { buildContext, buildMessages } from '../services/context.js';
 import { chat } from '../services/openrouter.js';
-import { handleSimpleQuery } from '../services/simple-query.js';
+import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { query } from '../services/supabase.js';
 import { errorResponse } from '../middleware/error.js';
 
@@ -82,6 +82,7 @@ export async function handleChat(request, env) {
   try {
     const body = await request.json();
     const userMessage = (body.message || '').trim();
+    const chatContext = (body.context || '').trim();
 
     if (!userMessage) {
       return errorResponse(request, 400, 'El mensaje no puede estar vacío');
@@ -91,24 +92,20 @@ export async function handleChat(request, env) {
       return errorResponse(request, 400, 'El mensaje es demasiado largo');
     }
 
-    const simpleResponse = await handleSimpleQuery(env, userMessage);
-    if (simpleResponse) {
-      return new Response(JSON.stringify({
-        response: simpleResponse,
-        hasContext: true,
-        source: 'database',
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const [context, webResults] = await Promise.all([
+      buildContext(env, userMessage),
+      webSearch(userMessage).catch(() => []),
+    ]);
 
-    const context = await buildContext(env, userMessage);
-    const messages = await buildMessages(env, context, userMessage);
+    const webContext = formatSearchResults(webResults);
+    const combined = context + (webContext ? '\n\n' + webContext : '');
+    const messages = await buildMessages(env, combined, userMessage, chatContext);
     const response = await chat(env, messages);
 
     return new Response(JSON.stringify({
       response,
-      hasContext: context.length > 0,
+      hasContext: combined.length > 0,
+      context: chatContext,
       source: 'ai',
     }), {
       headers: { 'Content-Type': 'application/json' },

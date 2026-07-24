@@ -10,11 +10,14 @@ export async function fetchPublic(resource) {
   return res.json();
 }
 
-export async function fetchChat(message) {
+export async function fetchChat(message, context = '') {
+  const body = { message };
+  if (context) body.context = context;
+
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {

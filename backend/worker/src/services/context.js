@@ -2,74 +2,78 @@ import { rpc, query } from './supabase.js';
 
 const DEFAULT_SYSTEM_PROMPT = `Eres el asistente virtual de Tecno San Juan, un negocio de reparaci\u00f3n y servicios tecnol\u00f3gicos en San Juan, Argentina.
 
-Debes responder \u00daNICAMENTE con la informaci\u00f3n proporcionada en el contexto debajo.
-Si la informaci\u00f3n solicitada no est\u00e1 en el contexto, debes decir: "No dispongo de esa informaci\u00f3n en este momento."
-NO inventes respuestas. NO uses informaci\u00f3n externa.
-S\u00e9 amable, profesional y conciso.
-Si te preguntan por algo que no sea sobre Tecno San Juan, responde que solo puedes ayudar con informaci\u00f3n del negocio.`;
+MISI\u00d3N PRINCIPAL - Responder sobre Tecno San Juan:
+Us\u00e1 la informaci\u00f3n del negocio para responder sobre servicios, productos, precios, horarios, promociones y todo lo relacionado con Tecno San Juan. Sos un experto en esto.
 
-let systemPromptCache = null;
-let fallbackMessageCache = null;
+B\u00daSQUEDA WEB:
+Ten\u00e9s acceso a b\u00fasqueda web en tiempo real. Cuando te pregunten sobre temas que requieran informaci\u00f3n actualizada (fechas de lanzamiento, precios de mercado, noticias, especificaciones t\u00e9cnicas, comparativas), US\u00c1 la b\u00fasqueda web autom\u00e1ticamente para responder con informaci\u00f3n precisa y actual. No te limites a decir que no sab\u00e9s, busc\u00e1 en la web.
+
+REGLAS:
+- Si es sobre Tecno San Juan, prioriz\u00e1 SIEMPRE la informaci\u00f3n del negocio.
+- Para preguntas generales de tecnolog\u00eda, us\u00e1 la b\u00fasqueda web.
+- No inventes datos sobre Tecno San Juan. Si no est\u00e1 en el contexto, no lo afirmes.
+- S\u00e9 amable, profesional, conciso y en argentino.`;
 
 export async function getSystemPrompt(env) {
   try {
-    if (!systemPromptCache) {
-      const config = await query(env, 'chatbot_config', { eq: { is_active: 'true' } }, false);
-      const row = Array.isArray(config) ? config[0] : config;
-      if (row && row.system_prompt && row.system_prompt.trim()) {
-        systemPromptCache = row.system_prompt;
-      } else {
-        systemPromptCache = DEFAULT_SYSTEM_PROMPT;
-      }
-      if (row && row.fallback_message) {
-        fallbackMessageCache = row.fallback_message;
-      }
-    }
-    return { system: systemPromptCache, fallback: fallbackMessageCache || 'No dispongo de esa informaci\u00f3n en este momento.' };
+    const config = await query(env, 'chatbot_config', { eq: { is_active: 'true' } }, false);
+    const row = Array.isArray(config) ? config[0] : config;
+    const system = (row && row.system_prompt && row.system_prompt.trim()) ? row.system_prompt : DEFAULT_SYSTEM_PROMPT;
+    const fallback = (row && row.fallback_message) ? row.fallback_message : 'No dispongo de esa informaci\u00f3n en este momento.';
+    return { system, fallback };
   } catch (err) {
     console.error('Error loading chatbot config:', err);
     return { system: DEFAULT_SYSTEM_PROMPT, fallback: 'No dispongo de esa informaci\u00f3n en este momento.' };
   }
 }
 
-export function invalidateCache() {
-  systemPromptCache = null;
-  fallbackMessageCache = null;
-}
-
 export async function buildContext(env, userMessage) {
   try {
-    const results = await rpc(env, 'search_all_tables', {
-      search_query: userMessage,
-    });
+    let contexto = '';
 
-    if (!results || results.length === 0) {
-      return '';
+    try {
+      const resumen = await rpc(env, 'get_business_context', {});
+      if (resumen) contexto += resumen + '\n\n';
+    } catch (e) {
+      console.warn('Error fetching business context:', e);
     }
 
-    const contextParts = results.map((row, index) => {
-      return `[${index + 1}] ${row.content} (Fuente: ${row.table_name})`;
-    });
+    try {
+      const results = await rpc(env, 'search_all_tables', {
+        search_query: userMessage,
+      });
 
-    return contextParts.join('\n\n');
+      if (results && results.length > 0) {
+        const searchParts = results.map((row, index) => {
+          return `[${index + 1}] ${row.content} (Fuente: ${row.table_name})`;
+        });
+        contexto += 'Resultados de búsqueda:\n' + searchParts.join('\n\n');
+      }
+    } catch (e) {
+      console.warn('Error searching tables:', e);
+    }
+
+    return contexto || '';
   } catch (err) {
     console.error('Error building context:', err);
     return '';
   }
 }
 
-export async function buildMessages(env, context, userMessage) {
+export async function buildMessages(env, context, userMessage, chatContext) {
   const { system, fallback } = await getSystemPrompt(env);
 
+  let systemContent = system;
+  if (chatContext) {
+    systemContent += `\n\nContexto actual: ${chatContext}`;
+  }
+  if (context && context.trim()) {
+    systemContent += '\n\nINFORMACIÓN DISPONIBLE:\n' + context;
+  }
+
   const messages = [
-    {
-      role: 'system',
-      content: system + '\n\n' + (context || fallback),
-    },
-    {
-      role: 'user',
-      content: userMessage,
-    },
+    { role: 'system', content: systemContent },
+    { role: 'user', content: userMessage },
   ];
 
   return messages;
