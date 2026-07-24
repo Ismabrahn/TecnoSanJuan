@@ -66,7 +66,8 @@ export async function initChatbot() {
         addMessage(data.response, 'bot', 'ai');
         if (data.interview.complete) {
           if (data.phone) phoneNumber = data.phone;
-          addQuoteWhatsApp(data.response, data.phone || phoneNumber);
+          const whatsappText = data.summary || data.response;
+          addQuoteWhatsApp(whatsappText, data.phone || phoneNumber);
         }
       } else {
         addMessage(data.response, 'bot', data.source);
