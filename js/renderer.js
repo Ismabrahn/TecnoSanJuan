@@ -1,4 +1,5 @@
 import { $, $$, createElement, formatPrice } from './utils.js';
+import { getChatbot } from './chatbot.js';
 
 export function renderBusinessInfo(info) {
   if (!info) return;
@@ -150,9 +151,8 @@ export function renderPrint3d(printData) {
   container.parentElement.appendChild(quoteBtn);
 
   quoteBtn.addEventListener('click', () => {
-    import('./quote-chat.js').then(mod => {
-      mod.openQuoteChat({ context: '3d_quote', title: 'Presupuesto de Impresión 3D' });
-    });
+    const api = getChatbot();
+    if (api) api.startChat('3d_quote');
   });
 }
 

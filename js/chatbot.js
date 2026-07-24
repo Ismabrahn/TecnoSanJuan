@@ -2,6 +2,12 @@ import { $, createElement } from './utils.js';
 import { fetchChat, fetchPublic } from './api.js';
 
 let initialized = false;
+let currentContext = '';
+let chatbotApi = null;
+
+export function getChatbot() {
+  return chatbotApi;
+}
 
 export async function initChatbot() {
   if (initialized) return;
@@ -23,6 +29,7 @@ export async function initChatbot() {
     panel.classList.toggle('hidden', !isOpen);
     toggle.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('chatbot').classList.toggle('chatbot-panel-open', isOpen);
+    if (!open) currentContext = '';
     if (isOpen) input.focus();
   }
 
@@ -41,7 +48,7 @@ export async function initChatbot() {
     const typing = addTypingIndicator();
 
     try {
-      const data = await fetchChat(text);
+      const data = await fetchChat(text, currentContext);
       typing.remove();
       addMessage(data.response, 'bot', data.source);
     } catch (err) {
@@ -93,4 +100,16 @@ export async function initChatbot() {
   } catch {
     addMessage('¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.', 'bot');
   }
+
+  chatbotApi = {
+    async startChat(context) {
+      currentContext = context;
+      messages.innerHTML = '';
+      togglePanel(true);
+
+      addMessage('Decime que necesitas y te ayudo con todo.', 'bot');
+      send.disabled = false;
+      input.focus();
+    },
+  };
 }
