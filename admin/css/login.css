@@ -123,3 +123,20 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+    border-radius: 8px;
+  }
+
+  .login-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .login-page {
+    padding: 12px;
+    align-items: flex-start;
+    padding-top: 48px;
+  }
+}

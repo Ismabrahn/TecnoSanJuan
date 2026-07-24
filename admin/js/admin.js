@@ -29,6 +29,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const pageTitle = document.getElementById('pageTitle');
   const contentArea = document.getElementById('contentArea');
   const toolbar = document.getElementById('toolbar');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  function closeSidebar() {
+    if (window.innerWidth <= 900) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+    }
+  }
+
+  function toggleSidebar() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  }
+
+  document.getElementById('hamburgerBtn').addEventListener('click', toggleSidebar);
+  overlay.addEventListener('click', closeSidebar);
 
   let currentModule = null;
   let dataTable = null;
@@ -47,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         sidebarNav.querySelectorAll('a').forEach(a => a.classList.remove('active'));
         link.classList.add('active');
+        closeSidebar();
         loadModule(link.dataset.module);
       }
     });

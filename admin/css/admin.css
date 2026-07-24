@@ -45,6 +45,7 @@ body {
   bottom: 0;
   overflow-y: auto;
   z-index: 50;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-header {
@@ -91,11 +92,42 @@ body {
   border-left: 3px solid var(--primary);
 }
 
+.sidebar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.sidebar-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--text);
+  margin: 5px 0;
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 49;
+}
+
 .main-content {
   margin-left: var(--sidebar-width);
   flex: 1;
   padding: 24px;
   min-height: 100vh;
+  transition: margin-left 0.3s ease;
 }
 
 .topbar {
@@ -105,16 +137,28 @@ body {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
+  gap: 12px;
 }
 
-.topbar h2 {
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar-left h2 {
   font-size: 1.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .card {
@@ -378,16 +422,102 @@ td.actions {
   width: auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .sidebar {
-    display: none;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.open {
+    display: block;
   }
 
   .main-content {
     margin-left: 0;
   }
 
+  .sidebar-hamburger {
+    display: block;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .topbar-left h2 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .topbar-left {
+    justify-content: flex-start;
+  }
+
+  .topbar-actions {
+    justify-content: flex-end;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    max-width: none;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .table-container {
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  thead th,
+  tbody td {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-left h2 {
+    font-size: 1rem;
+  }
+
+  .topbar-actions span {
+    display: none;
+  }
+
+  .btn-sm {
+    font-size: 0.75rem;
+    padding: 3px 8px;
   }
 }
