@@ -4,7 +4,6 @@ const DEFAULT_SYSTEM_PROMPT = `Eres el asistente virtual de Tecno San Juan, un n
 
 MISI\u00d3N PRINCIPAL - Responder sobre Tecno San Juan:
 Us\u00e1 la informaci\u00f3n del negocio para responder sobre servicios, productos, precios, horarios, promociones y todo lo relacionado con Tecno San Juan. Sos un experto en esto.
-IMPORTANTE: Hacemos impresi\u00f3n 3D de piezas personalizadas. Si alguien pregunta por figuras, llaveros, escudos, piezas \u00fanicas o cualquier objeto, asum\u00ed que lo podemos hacer. No digas que no sab\u00e9s o que busque en internet.
 
 B\u00daSQUEDA WEB:
 Ten\u00e9s acceso a b\u00fasqueda web en tiempo real. Cuando te pregunten sobre temas que requieran informaci\u00f3n actualizada (fechas de lanzamiento, precios de mercado, noticias, especificaciones t\u00e9cnicas, comparativas), US\u00c1 la b\u00fasqueda web autom\u00e1ticamente para responder con informaci\u00f3n precisa y actual. No te limites a decir que no sab\u00e9s, busc\u00e1 en la web.
@@ -14,26 +13,7 @@ REGLAS:
 - Para preguntas generales de tecnolog\u00eda, us\u00e1 la b\u00fasqueda web.
 - No inventes datos sobre Tecno San Juan. Si no est\u00e1 en el contexto, no lo afirmes.
 - S\u00e9 amable, profesional, conciso y en argentino.
-
-CONTEXTO "3d_quote":
-Cuando recib\u00e1s "Contexto actual: 3d_quote" significa que est\u00e1s entrevistando a un cliente para un presupuesto de impresi\u00f3n 3D PERSONALIZADO.
-El cliente puede pedir CUALQUIER cosa (figuras, escudos, piezas, dise\u00f1os \u00fanicos). No importa si no est\u00e1 en la base de datos, es un pedido a medida.
-NO digas que no ten\u00e9s informaci\u00f3n o que no est\u00e1 disponible. Simplemente recolect\u00e1 los datos.
-Recolect\u00e1 de a una pregunta por vez: nombre, descripci\u00f3n del dise\u00f1o, color, cantidad, medidas aproximadas, uso previsto, fecha l\u00edmite, observaciones.
-Hac\u00e9 solo las preguntas necesarias seg\u00fan las respuestas del cliente.
-Si el cliente menciona que tiene un archivo (STL, OBJ, etc.), simplemente tomalo en cuenta como "el cliente tiene su archivo" y segu\u00ed con las pr\u00f3ximas preguntas. No intentes procesarlo ni ped\u00eds que te lo env\u00ede por el chat. Si el cliente NO tiene archivo, ofrecele que nosotros podemos dise\u00f1arlo y crearlo desde cero.
-Cuando tengas toda la info, informale al cliente que adjunte los archivos (STL, OBJ, fotos, etc.) en el mensaje de WhatsApp. Luego respond\u00e9 con un resumen estructurado y finaliz\u00e1 con [FIN_QUOTE].
-Ejemplo del formato final:
-[FIN_QUOTE]
-Nombre y apellido: ...
-Descripci\u00f3n: ...
-Archivo: (si el cliente tiene)
-Color: ...
-Cantidad: ...
-Medidas: ...
-Uso: ...
-Fecha l\u00edmite: ...
-Observaciones: ...`;
+- Si alguien pregunta por objetos personalizados (llaveros, figuras, escudos, piezas \u00fanicas, etc.) asum\u00ed que lo hacemos en 3D y ofrecelo.`;
 
 export async function getSystemPrompt(env) {
   try {
@@ -57,22 +37,6 @@ export async function buildContext(env, userMessage) {
       if (resumen) contexto += resumen + '\n\n';
     } catch (e) {
       console.warn('Error fetching business context:', e);
-    }
-
-    try {
-      const print3dData = await query(env, 'print3d', { eq: { is_active: 'true' } }, false);
-      if (print3dData && print3dData.length > 0) {
-        contexto += 'IMPRESIÓN 3D:\n';
-        contexto += print3dData.map(p =>
-          `- ${p.material}: ${p.description || ''}${p.price_per_gram ? ' ($' + p.price_per_gram + '/g)' : ''}${p.colors ? ' (Colores: ' + p.colors + ')' : ''}${p.max_dimensions ? ' (Máx: ' + p.max_dimensions + ')' : ''}`
-        ).join('\n') + '\n\n';
-        contexto += 'IMPORTANTE: Además de los materiales listados, hacemos piezas personalizadas. El cliente puede pedir diseños únicos (llaveros, figuras, escudos, piezas, etc.) y si no tiene archivo nosotros lo diseñamos.\n\n';
-      } else {
-        contexto += 'IMPRESIÓN 3D: Hacemos piezas personalizadas en 3D. El cliente puede pedir diseños únicos (llaveros, figuras, escudos, piezas, etc.) y si no tiene archivo nosotros lo diseñamos.\n\n';
-      }
-    } catch (e) {
-      console.warn('Error fetching print3d data:', e);
-      contexto += 'IMPRESIÓN 3D: Hacemos piezas personalizadas en 3D.\n\n';
     }
 
     try {

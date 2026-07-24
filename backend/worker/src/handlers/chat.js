@@ -1,5 +1,6 @@
 import { buildContext, buildMessages } from '../services/context.js';
 import { chat } from '../services/openrouter.js';
+import { handleInterview } from '../services/interview/index.js';
 import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { query } from '../services/supabase.js';
 import { errorResponse } from '../middleware/error.js';
@@ -90,6 +91,27 @@ export async function handleChat(request, env) {
 
     if (userMessage.length > 2000) {
       return errorResponse(request, 400, 'El mensaje es demasiado largo');
+    }
+
+    const interview = body.interview || null;
+
+    if (chatContext === '3d_quote' || interview) {
+      const result = await handleInterview(env, interview, userMessage);
+
+      let phone = '';
+      try {
+        const biz = await query(env, 'business_info', { limit: '1' }, true);
+        if (biz?.phone) phone = biz.phone.replace(/[^0-9]/g, '');
+      } catch (e) {}
+
+      return new Response(JSON.stringify({
+        response: result.response,
+        interview: result.interview,
+        phone,
+        source: 'ai',
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const [context, webResults] = await Promise.all([
