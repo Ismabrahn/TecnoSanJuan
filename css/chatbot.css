@@ -219,6 +219,28 @@
   30% { opacity: 1; transform: scale(1); }
 }
 
+.whatsapp-quote-btn {
+  display: block;
+  background: #25d366;
+  color: #fff;
+  text-align: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  margin: 10px 0;
+  transition: background 0.2s;
+}
+.whatsapp-quote-btn:hover {
+  background: #1ebe58;
+}
+
+.chatbot-input input:disabled {
+  background: #f0f0f0;
+  cursor: not-allowed;
+}
+
 @media (max-width: 480px) {
   .chatbot-panel {
     position: fixed;

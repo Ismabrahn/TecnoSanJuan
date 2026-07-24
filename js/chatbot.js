@@ -3,6 +3,7 @@ import { fetchChat, fetchPublic } from './api.js';
 
 let initialized = false;
 let currentContext = '';
+let phoneNumber = '';
 let chatbotApi = null;
 
 export function getChatbot() {
@@ -29,12 +30,22 @@ export async function initChatbot() {
     panel.classList.toggle('hidden', !isOpen);
     toggle.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('chatbot').classList.toggle('chatbot-panel-open', isOpen);
-    if (!open) currentContext = '';
+    if (!open) { currentContext = ''; input.disabled = false; }
     if (isOpen) input.focus();
   }
 
   toggle.addEventListener('click', () => togglePanel(true));
   close.addEventListener('click', () => togglePanel(false));
+
+  function addQuoteWhatsApp(summary) {
+    const cleanSummary = summary.replace(/\[FIN_QUOTE\]/g, '').trim();
+    const msg = encodeURIComponent('Hola, quiero solicitar el siguiente presupuesto:\n\n' + cleanSummary);
+    const waUrl = `https://wa.me/${phoneNumber}?text=${msg}`;
+    const btn = createElement('a', { className: 'whatsapp-quote-btn', href: waUrl, target: '_blank', textContent: 'Enviar por WhatsApp' });
+    messages.appendChild(btn);
+    messages.scrollTop = messages.scrollHeight;
+    input.disabled = true;
+  }
 
   async function sendMessage() {
     const text = input.value.trim();
@@ -50,13 +61,21 @@ export async function initChatbot() {
     try {
       const data = await fetchChat(text, currentContext);
       typing.remove();
-      addMessage(data.response, 'bot', data.source);
+      const finIndex = data.response.indexOf('[FIN_QUOTE]');
+      if (finIndex !== -1) {
+        const summary = data.response.substring(finIndex);
+        const mainText = data.response.substring(0, finIndex).trim();
+        if (mainText) addMessage(mainText, 'bot', data.source);
+        addQuoteWhatsApp(summary);
+      } else {
+        addMessage(data.response, 'bot', data.source);
+      }
     } catch (err) {
       typing.remove();
       addMessage(err.message || 'Error de conexión', 'bot');
     } finally {
       send.disabled = false;
-      input.focus();
+      if (!input.disabled) input.focus();
     }
   }
 
@@ -94,9 +113,13 @@ export async function initChatbot() {
   }
 
   try {
-    const config = await fetchPublic('chatbot-config');
+    const [config, biz] = await Promise.all([
+      fetchPublic('chatbot-config'),
+      fetchPublic('business-info').catch(() => null),
+    ]);
     const welcome = config?.welcome_message || '¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.';
     addMessage(welcome, 'bot');
+    if (biz?.phone) phoneNumber = biz.phone.replace(/[^0-9]/g, '');
   } catch {
     addMessage('¡Hola! Soy el asistente virtual de Tecno San Juan. Consultame sobre servicios, precios, horarios y más.', 'bot');
   }
