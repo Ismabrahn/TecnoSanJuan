@@ -7,8 +7,12 @@ import { errorResponse } from '../middleware/error.js';
 
 const RATE_LIMIT_MAP = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000;
-const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_MAX = 40;
 let RATE_LIMIT_CLEANUP_INTERVAL = null;
+
+const IN_FLIGHT = new Set();
+const LAST_MESSAGE = new Map();
+const SPAM_WINDOW = 5000;
 
 function cleanupRateLimitMap() {
   const cutoff = Date.now() - RATE_LIMIT_WINDOW * 2;
@@ -43,6 +47,20 @@ function checkRateLimit(clientIp) {
   RATE_LIMIT_MAP.set(clientIp, timestamps);
 
   return timestamps.length <= RATE_LIMIT_MAX;
+}
+
+function detectSpam(clientIp, message) {
+  if (IN_FLIGHT.has(clientIp)) {
+    return 'Ya tenés una consulta en proceso. Esperá la respuesta.';
+  }
+
+  const last = LAST_MESSAGE.get(clientIp);
+  if (last && last.message === message && Date.now() - last.time < SPAM_WINDOW) {
+    return 'Ese mensaje ya lo enviaste hace segundos. Esperá la respuesta.';
+  }
+
+  LAST_MESSAGE.set(clientIp, { message, time: Date.now() });
+  return null;
 }
 
 export async function handleHealth(env) {
@@ -93,55 +111,66 @@ export async function handleChat(request, env) {
       return errorResponse(request, 400, 'El mensaje es demasiado largo');
     }
 
-    const interview = body.interview || null;
+    const spamError = detectSpam(clientIp, userMessage);
+    if (spamError) {
+      return errorResponse(request, 429, spamError);
+    }
 
-    if (chatContext === '3d_quote' || interview) {
-      const result = await handleInterview(env, interview, userMessage);
+    IN_FLIGHT.add(clientIp);
 
-      let phone = '';
-      try {
-        const phones = await query(env, 'phones', {}, false);
-        const phone3d = phones?.find(p => /3d|impresión/i.test(p.label || p.name || ''));
-        if (phone3d) {
-          phone = (phone3d.phone || phone3d.number || '').replace(/[^0-9]/g, '');
-        }
-        if (!phone) {
-          const biz = await query(env, 'business_info', { limit: '1' }, true);
-          if (biz?.phone) phone = biz.phone.replace(/[^0-9]/g, '');
-        }
-        if (!phone && phones?.length > 0) {
-          phone = (phones[0].phone || phones[0].number || '').replace(/[^0-9]/g, '');
-        }
-      } catch (e) {}
+    try {
+      const interview = body.interview || null;
+
+      if (chatContext === '3d_quote' || interview) {
+        const result = await handleInterview(env, interview, userMessage);
+
+        let phone = '';
+        try {
+          const phones = await query(env, 'phones', {}, false);
+          const phone3d = phones?.find(p => /3d|impresión/i.test(p.label || p.name || ''));
+          if (phone3d) {
+            phone = (phone3d.phone || phone3d.number || '').replace(/[^0-9]/g, '');
+          }
+          if (!phone) {
+            const biz = await query(env, 'business_info', { limit: '1' }, true);
+            if (biz?.phone) phone = biz.phone.replace(/[^0-9]/g, '');
+          }
+          if (!phone && phones?.length > 0) {
+            phone = (phones[0].phone || phones[0].number || '').replace(/[^0-9]/g, '');
+          }
+        } catch (e) {}
+
+        return new Response(JSON.stringify({
+          response: result.response,
+          interview: result.interview,
+          phone,
+          source: 'ai',
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const [context, webResults] = await Promise.all([
+        buildContext(env, userMessage),
+        webSearch(userMessage).catch(() => []),
+      ]);
+
+      const webContext = formatSearchResults(webResults);
+      const combined = context + (webContext ? '\n\n' + webContext : '');
+      const messages = await buildMessages(env, combined, userMessage, chatContext);
+      const response = await chat(env, messages);
 
       return new Response(JSON.stringify({
-        response: result.response,
-        interview: result.interview,
-        phone,
+        response,
+        hasContext: combined.length > 0,
+        context: chatContext,
         source: 'ai',
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
+    } finally {
+      IN_FLIGHT.delete(clientIp);
     }
-
-    const [context, webResults] = await Promise.all([
-      buildContext(env, userMessage),
-      webSearch(userMessage).catch(() => []),
-    ]);
-
-    const webContext = formatSearchResults(webResults);
-    const combined = context + (webContext ? '\n\n' + webContext : '');
-    const messages = await buildMessages(env, combined, userMessage, chatContext);
-    const response = await chat(env, messages);
-
-    return new Response(JSON.stringify({
-      response,
-      hasContext: combined.length > 0,
-      context: chatContext,
-      source: 'ai',
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
   } catch (err) {
     console.error('Chat error:', err.message);
     return errorResponse(request, 500, err.message);
