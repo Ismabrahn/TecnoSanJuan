@@ -8,6 +8,8 @@ export const MODULES = [
       { key: 'name', label: 'Nombre', type: 'text', required: true },
       { key: 'slogan', label: 'Slogan', type: 'text' },
       { key: 'description', label: 'Descripción', type: 'textarea' },
+      { key: 'phone', label: 'WhatsApp', type: 'text', placeholder: '+54 9 340 5480010' },
+      { key: 'website', label: 'Sitio Web', type: 'url' },
       { key: 'logo_url', label: 'Logo', type: 'file' },
       { key: 'primary_color', label: 'Color Primario', type: 'color' },
       { key: 'secondary_color', label: 'Color Secundario', type: 'color' },

@@ -100,15 +100,17 @@ export async function handleChat(request, env) {
 
       let phone = '';
       try {
-        const biz = await query(env, 'business_info', { limit: '1' }, true);
-        if (biz?.phone) {
-          phone = biz.phone.replace(/[^0-9]/g, '');
-        } else {
-          const phones = await query(env, 'phones', {}, false);
-          if (phones && phones.length > 0) {
-            const p = phones[0];
-            phone = (p.phone || p.number || '').replace(/[^0-9]/g, '');
-          }
+        const phones = await query(env, 'phones', {}, false);
+        const phone3d = phones?.find(p => /3d|impresión/i.test(p.label || p.name || ''));
+        if (phone3d) {
+          phone = (phone3d.phone || phone3d.number || '').replace(/[^0-9]/g, '');
+        }
+        if (!phone) {
+          const biz = await query(env, 'business_info', { limit: '1' }, true);
+          if (biz?.phone) phone = biz.phone.replace(/[^0-9]/g, '');
+        }
+        if (!phone && phones?.length > 0) {
+          phone = (phones[0].phone || phones[0].number || '').replace(/[^0-9]/g, '');
         }
       } catch (e) {}
 
