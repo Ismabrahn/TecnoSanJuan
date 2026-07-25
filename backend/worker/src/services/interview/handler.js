@@ -83,14 +83,27 @@ Respondé SOLO con el valor JSON:`,
 async function extractWithAI(env, campo, userMessage, state) {
   const msgs = buildExtractPrompt(campo, userMessage, state);
   const raw = await chat(env, msgs);
+  defaultLogger.info('[INTERPRETER]', `raw="${raw}" campo="${campo.nombre}" msg="${userMessage.substring(0, 40)}"`);
   try {
     const cleaned = raw.replace(/```json\s*|\s*```/g, '').trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    defaultLogger.info('[INTERPRETER]', `parsed OK: ${JSON.stringify(parsed)}`);
+    return parsed;
   } catch {
     const match = raw.match(/\{[\s\S]*\}|true|false|null|"[^"]*"|'[^']*'/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch { return null; }
+      try {
+        const parsed = JSON.parse(match[0]);
+        defaultLogger.info('[INTERPRETER]', `parsed regex: ${JSON.stringify(parsed)}`);
+        return parsed;
+      } catch { return null; }
     }
+    // Fallback: for text fields, use raw text if it doesn't look like JSON
+    if (campo.tipo === 'texto' && raw.trim().length > 0) {
+      defaultLogger.info('[INTERPRETER]', `fallback raw text: "${raw.trim()}"`);
+      return raw.trim();
+    }
+    defaultLogger.info('[INTERPRETER]', 'null (no match)');
     return null;
   }
 }
@@ -347,16 +360,21 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
   if (currentField) {
     log.info('[HANDLER]', `[DEBUG] currentField="${currentField.nombre}" tipo="${currentField.tipo}" msg="${userMessage.substring(0, 40)}"`);
     value = await extractValue(env, currentField, userMessage, state);
+    log.info('[RESOLVER]', `entity="${currentField.nombre}" value=${JSON.stringify(value)} accepted=${value !== null}`);
     if (value !== null) {
       const oldVal = state.campos[currentField.nombre]?.valor;
+      log.info('[STATE]', `antes nombre=${JSON.stringify(state.campos.nombre?.valor)} estado=${state.campos.nombre?.estado}`);
       engine.markField(state, currentField.nombre, value);
       if (oldVal !== null) engine.addHistory(state, currentField.nombre, oldVal, value);
+      log.info('[STATE]', `despues nombre=${JSON.stringify(state.campos.nombre?.valor)} estado=${state.campos.nombre?.estado}`);
       log.info('[HANDLER]', `Extraído: ${currentField.nombre} = ${JSON.stringify(value)}`);
       await extractMultiple(engine, env, state, userMessage);
     } else {
       log.info('[HANDLER]', `[DEBUG] extracción falló para: ${currentField.nombre}, msg="${userMessage.substring(0, 40)}"`);
     }
   }
+  const pendingAfter = engine.getPendingFields(state);
+  log.info('[ENGINE]', `pendingFields=[${pendingAfter.map(f => f.nombre).join(',')}] completed=${engine.getCamposCompletos(state).length}/${state.campos ? Object.keys(state.campos).length : '?'}`);
 
   const lower = userMessage.toLowerCase();
   let change = null;
@@ -430,6 +448,8 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
   const nextField = engine.getNextField(state);
   const response = await generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema, change);
 
+  const status = engine.getStatus(state);
+  log.info('[HANDLER]', `Pregunta enviada: "${response.substring(0, 60)}" pendingFields=[${status.pendingFields.join(',')}]`);
   log.info('[HANDLER]', `Siguiente campo: ${nextField?.nombre || 'ninguno'}`);
 
   return {

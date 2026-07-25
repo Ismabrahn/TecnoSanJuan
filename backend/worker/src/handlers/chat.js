@@ -320,9 +320,6 @@ async function processNeedDetection(env, session, message) {
   }
 
   const prefill = {};
-  if (session.nombre_cliente) {
-    prefill.nombre = session.nombre_cliente;
-  }
 
   try {
     const result = await handleInterview(env, null, message, null, prefill);
