@@ -1,5 +1,5 @@
-import impresion_3d from './impresion_3d.json' with { type: 'json' };
-import carteleria_led from './carteleria_led.json' with { type: 'json' };
+import impresion_3d from './impresion_3d.json';
+import carteleria_led from './carteleria_led.json';
 import { validateAllServices } from '../catalog-validator.js';
 
 const SERVICES = [impresion_3d, carteleria_led];
