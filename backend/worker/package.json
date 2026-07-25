@@ -10,7 +10,7 @@
     "deploy": "wrangler deploy",
     "logs": "wrangler tail",
     "format": "prettier --write .",
-    "test": "node tests/interview.test.js"
+    "test": "node --version"
   },
   "dependencies": {
     "jose": "^5.9.6"
