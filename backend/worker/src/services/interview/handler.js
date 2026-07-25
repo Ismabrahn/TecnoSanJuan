@@ -117,6 +117,16 @@ async function extractValue(env, campo, userMessage, state) {
   return null;
 }
 
+async function extractMultiple(engine, env, state, userMessage) {
+  let field = engine.getNextField(state);
+  while (field) {
+    const value = await extractValue(env, field, userMessage, state);
+    if (value === null) break;
+    engine.markField(state, field.nombre, value);
+    field = engine.getNextField(state);
+  }
+}
+
 const TRANSITIONS = ['¡Perfecto!', 'Genial.', 'Bien.', 'Entendido.', 'De acuerdo.', 'Excelente.', 'Listo.'];
 
 async function generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema) {
@@ -191,6 +201,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
       if (firstValue !== null) {
         engine.markField(state, firstField.nombre, firstValue);
         log.info('[HANDLER]', `Extraído de mensaje inicial: ${firstField.nombre} = ${JSON.stringify(firstValue)}`);
+        await extractMultiple(engine, env, state, userMessage);
       }
     }
 
@@ -244,6 +255,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     if (value !== null) {
       engine.markField(state, currentField.nombre, value);
       log.info('[HANDLER]', `Extraído: ${currentField.nombre} = ${JSON.stringify(value)}`);
+      await extractMultiple(engine, env, state, userMessage);
     } else {
       log.info('[HANDLER]', `[DEBUG] extracción falló para: ${currentField.nombre}, msg="${userMessage.substring(0, 40)}"`);
     }

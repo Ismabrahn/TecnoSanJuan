@@ -1,6 +1,7 @@
 name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-07-26"
+compatibility_flags = ["nodejs_compat"]
 account_id = "57de15affd59c937759222091bcd23bf"
 
 [[kv_namespaces]]
