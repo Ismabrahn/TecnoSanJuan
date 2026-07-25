@@ -30,6 +30,15 @@ function isQuestion(msg) {
   return qWords.includes(first);
 }
 
+function isTriggerMessage(msg) {
+  const trimmed = msg.trim().toLowerCase();
+  if (!trimmed || trimmed.length <= 2) return true;
+  const triggers = new Set(['ok', 'oka', 'okey', 'vale', 'dale', 'si', 'sí', 'sip', 'nah', 'nop', 'no', 'bien', 'joya', 'bárbaro', 'perfecto', 'listo', 'dale', 'sale', 'vamos', 'empecemos', 'empezar']);
+  if (triggers.has(trimmed)) return true;
+  if (trimmed.length <= 1) return true;
+  return false;
+}
+
 const EXTRACT_SYSTEM = `Sos un extractor de datos para presupuestos de Tecno San Juan.
 Respondé ÚNICAMENTE con un valor JSON sin texto adicional.
 
@@ -89,10 +98,10 @@ async function extractWithAI(env, campo, userMessage, state) {
 async function extractValue(env, campo, userMessage, state) {
   if (!campo) return null;
 
-  if (isQuestion(userMessage)) return null;
-
   if (campo.tipo === 'boolean') {
     const first = getFirstWord(userMessage);
+    const lowerTrimmed = userMessage.trim().toLowerCase();
+    if (lowerTrimmed.startsWith('no sé') || lowerTrimmed.startsWith('no se') || lowerTrimmed === 'no sé' || lowerTrimmed === 'no se') return null;
     if (first === 'no') return false;
     if (['sí', 'si', 'yes', 's'].includes(first)) return true;
     const extracted = await extractWithAI(env, campo, userMessage, state);
@@ -110,6 +119,7 @@ async function extractValue(env, campo, userMessage, state) {
     return null;
   }
 
+  if (isTriggerMessage(userMessage)) return null;
   const extracted = await extractWithAI(env, campo, userMessage, state);
   if (extracted && typeof extracted === 'string' && extracted.trim().length > 1) {
     return extracted.trim();
@@ -129,8 +139,42 @@ async function extractMultiple(engine, env, state, userMessage) {
 
 const TRANSITIONS = ['¡Perfecto!', 'Genial.', 'Bien.', 'Entendido.', 'De acuerdo.', 'Excelente.', 'Listo.'];
 
-async function generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema) {
+async function generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema, change) {
   const name = state.campos?.nombre?.valor || '';
+
+  if (change) {
+    const nextPregunta = nextField?.pregunta || '';
+    const nombreCampo = state.campos[change.field]?.etiqueta || change.field;
+    try {
+      const aiResponse = await chat(env, [
+        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. El usuario cambió de opinión sobre un dato. Confirmale el cambio de forma breve y natural. Luego preguntá por lo siguiente. Usá el nombre del cliente si lo sabés. No te disculpes.` },
+        { role: 'user', content: `Cliente: ${name || 'sin nombre'}
+Campo cambiado: ${nombreCampo}
+Nuevo valor: ${JSON.stringify(change.value)}
+${nextPregunta ? `Siguiente pregunta: "${nextPregunta}"` : 'No faltan más datos'}` }
+      ]);
+      return aiResponse;
+    } catch {
+      const transition = TRANSITIONS[Math.floor(Math.random() * TRANSITIONS.length)];
+      return nextPregunta ? `${transition} Ahora, ${nextPregunta.toLowerCase()}` : `${transition} ¿Algo más que necesites?`;
+    }
+  }
+
+  if (currentField && value !== null && isQuestion(userMessage)) {
+    const nextPregunta = nextField?.pregunta || '';
+    try {
+      const aiResponse = await chat(env, [
+        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. El usuario respondió un dato pero también te hizo una pregunta. Respondé su pregunta de forma breve y útil. Luego, si falta algún dato, pedilo de forma natural. Usá el nombre del cliente si lo sabés. No seas repetitivo.` },
+        { role: 'user', content: `Cliente: ${name || 'sin nombre'}
+Mensaje: "${userMessage}"
+${nextPregunta ? `Siguiente dato: "${nextPregunta}"` : 'No faltan más datos'}` }
+      ]);
+      return aiResponse;
+    } catch {
+      const transition = TRANSITIONS[Math.floor(Math.random() * TRANSITIONS.length)];
+      return nextPregunta ? `${transition} ${nextPregunta}` : '¿Algo más que necesites?';
+    }
+  }
 
   if (currentField && isQuestion(userMessage)) {
     const pregunta = currentField.pregunta || '';
@@ -149,12 +193,22 @@ Pregunta original: "${pregunta}"` }
     }
   }
 
+  const trimmedLower = userMessage.trim().toLowerCase();
+
   if (currentField && value === null) {
     const pregunta = currentField.pregunta || '';
+    if (isTriggerMessage(userMessage)) {
+      const transition = TRANSITIONS[Math.floor(Math.random() * TRANSITIONS.length)];
+      return `${transition} ${pregunta}`;
+    }
+
+    if (currentField.tipo === 'boolean' && (trimmedLower.startsWith('no sé') || trimmedLower.startsWith('no se'))) {
+      return `No hay problema, lo dejamos pendiente. ${pregunta}`;
+    }
     const etiqueta = currentField.etiqueta || currentField.nombre || '';
     try {
       const aiResponse = await chat(env, [
-        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. No entendiste bien la respuesta del usuario. Preguntale de nuevo de forma clara y natural, variando un poco la redacción. Sé breve. Usá el nombre del cliente si lo sabés.` },
+        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. El usuario respondió algo que no quedó claro o incompleto. Preguntale de nuevo de forma natural, variando un poco la redacción. No te disculpes. Sé breve. Usá el nombre del cliente si lo sabés.` },
         { role: 'user', content: `Cliente: ${name || 'sin nombre'}
 Usuario dijo: "${userMessage}"
 Dato que necesitamos: ${etiqueta}
@@ -162,7 +216,7 @@ Pregunta anterior: "${pregunta}"` }
       ]);
       return aiResponse;
     } catch {
-      return `Disculpá, no entendí bien. ${pregunta}`;
+      return pregunta;
     }
   }
 
@@ -170,7 +224,46 @@ Pregunta anterior: "${pregunta}"` }
 
   const nextPregunta = nextField.pregunta || '';
   const transition = TRANSITIONS[Math.floor(Math.random() * TRANSITIONS.length)];
+  if (currentField && value !== null) {
+    const etiqueta = currentField.etiqueta || currentField.nombre || '';
+    if (currentField.tipo === 'boolean') {
+      const verb = value === true ? 'Sí' : 'No';
+      return `${transition} ${verb}. ${nextPregunta}`;
+    }
+    const valStr = typeof value === 'string' ? value : JSON.stringify(value);
+    return `${transition} ${etiqueta}: ${valStr}. ${nextPregunta}`;
+  }
   return `${transition} ${nextPregunta}`;
+}
+
+async function detectFieldChange(env, state, userMessage) {
+  const completed = Object.entries(state.campos || {})
+    .filter(([_, c]) => c.estado === 'completo' && c.valor !== null);
+  if (completed.length === 0) return null;
+
+  const completedText = completed.map(([k, c]) => `${k}: ${JSON.stringify(c.valor)}`).join('\n');
+  try {
+    const aiResponse = await chat(env, [
+      { role: 'system', content: `Analizá si el usuario quiere CAMBIAR una respuesta ya dada en un presupuesto.
+Respondé SOLO con JSON: {"field":"nombre","value":nuevoValor} o null si no hay cambio.
+Si dice "no"+"mejor"/"cambio"/"prefiero"/"en realidad" con otro valor: es un cambio.
+Si solo responde la pregunta actual o pregunta algo: null.
+No inventes cambios.` },
+      { role: 'user', content: `Respuestas actuales:
+${completedText}
+
+Mensaje: "${userMessage}"` }
+    ]);
+    const cleaned = aiResponse.replace(/```json\s*|\s*```/g, '').trim();
+    if (cleaned === 'null') return null;
+    const parsed = JSON.parse(cleaned);
+    if (parsed && parsed.field && parsed.value !== undefined && state.campos[parsed.field]) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function handleInterview(env, interview, userMessage, sessionId, prefill = {}) {
@@ -253,12 +346,65 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     log.info('[HANDLER]', `[DEBUG] currentField="${currentField.nombre}" tipo="${currentField.tipo}" msg="${userMessage.substring(0, 40)}"`);
     value = await extractValue(env, currentField, userMessage, state);
     if (value !== null) {
+      const oldVal = state.campos[currentField.nombre]?.valor;
       engine.markField(state, currentField.nombre, value);
+      if (oldVal !== null) engine.addHistory(state, currentField.nombre, oldVal, value);
       log.info('[HANDLER]', `Extraído: ${currentField.nombre} = ${JSON.stringify(value)}`);
       await extractMultiple(engine, env, state, userMessage);
     } else {
       log.info('[HANDLER]', `[DEBUG] extracción falló para: ${currentField.nombre}, msg="${userMessage.substring(0, 40)}"`);
     }
+  }
+
+  const lower = userMessage.toLowerCase();
+  let change = null;
+  if (lower.length > 3 && (lower.includes('no ') || lower.includes('mejor') || lower.includes('cambio') || lower.includes('prefiero') || lower.includes('realidad') || lower.includes('otro'))) {
+    change = await detectFieldChange(env, state, userMessage);
+    if (change) {
+      const oldVal = state.campos[change.field]?.valor;
+      engine.markField(state, change.field, change.value);
+      if (oldVal !== null) engine.addHistory(state, change.field, oldVal, change.value);
+      log.info('[HANDLER]', `Cambio de opinión: ${change.field} -> ${JSON.stringify(change.value)}`);
+    }
+  }
+
+  // Fase 6: Detect service switch mid-interview
+  const newServiceId = detectService(userMessage);
+  if (newServiceId && newServiceId !== schema.id) {
+    const newSchema = getDefinition(newServiceId);
+    const newEngine = getEngine(newServiceId);
+    const newState = newEngine.createState();
+    // Transfer nombre if available
+    if (state.campos?.nombre?.estado === 'completo' && state.campos.nombre.valor) {
+      newEngine.markField(newState, 'nombre', state.campos.nombre.valor);
+    }
+    log.info('[HANDLER]', `Cambio de servicio: ${schema.id} -> ${newServiceId}`);
+
+    const firstField = newEngine.getNextField(newState);
+    let firstValue = null;
+    if (firstField) {
+      firstValue = await extractValue(env, firstField, userMessage, newState);
+      if (firstValue !== null) {
+        newEngine.markField(newState, firstField.nombre, firstValue);
+        await extractMultiple(newEngine, env, newState, userMessage);
+      }
+    }
+
+    const nextField = newEngine.getNextField(newState);
+    if (!nextField) {
+      const summary = buildSummary(newSchema, newState);
+      const response = buildCompletionMessage(newSchema, newState);
+      newState.completada = true;
+      eventBus.emit(Events.InterviewCompleted, { type: newSchema.id, newState, summary });
+      log.info('[HANDLER]', 'Nueva entrevista completada inmediatamente tras cambio de servicio');
+      return { response, summary, interview: { type: newServiceId, state: newState, complete: true, lastQuestion: null }, progress: newEngine.getProgress(newState) };
+    }
+
+    const nextQ = await generateConversationalResponse(env, firstField, nextField, userMessage, firstValue, newState, newSchema);
+    if (newSchema.welcome && newSchema.welcome.title) {
+      return { response: `${newSchema.welcome.title} ${newSchema.welcome.message} ${nextQ}`, interview: { type: newServiceId, state: newState, complete: false, lastQuestion: nextQ }, progress: newEngine.getProgress(newState) };
+    }
+    return { response: nextQ, interview: { type: newServiceId, state: newState, complete: false, lastQuestion: nextQ }, progress: newEngine.getProgress(newState) };
   }
 
   const allDone = !engine.getNextField(state);
@@ -280,7 +426,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
   }
 
   const nextField = engine.getNextField(state);
-  const response = await generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema);
+  const response = await generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema, change);
 
   log.info('[HANDLER]', `Siguiente campo: ${nextField?.nombre || 'ninguno'}`);
 
