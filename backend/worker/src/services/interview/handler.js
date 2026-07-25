@@ -84,28 +84,44 @@ async function extractWithAI(env, campo, userMessage, state) {
   const msgs = buildExtractPrompt(campo, userMessage, state);
   const raw = await chat(env, msgs);
   defaultLogger.info('[INTERPRETER]', `raw="${raw}" campo="${campo.nombre}" msg="${userMessage.substring(0, 40)}"`);
-  try {
-    const cleaned = raw.replace(/```json\s*|\s*```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-    defaultLogger.info('[INTERPRETER]', `parsed OK: ${JSON.stringify(parsed)}`);
-    return parsed;
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}|true|false|null|"[^"]*"|'[^']*'/);
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[0]);
-        defaultLogger.info('[INTERPRETER]', `parsed regex: ${JSON.stringify(parsed)}`);
-        return parsed;
-      } catch { return null; }
-    }
-    // Fallback: for text fields, use raw text if it doesn't look like JSON
-    if (campo.tipo === 'texto' && raw.trim().length > 0) {
-      defaultLogger.info('[INTERPRETER]', `fallback raw text: "${raw.trim()}"`);
-      return raw.trim();
-    }
-    defaultLogger.info('[INTERPRETER]', 'null (no match)');
-    return null;
+
+  function tryParse(text) {
+    try {
+      const cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      defaultLogger.info('[INTERPRETER]', `parsed: ${JSON.stringify(parsed)}`);
+      return parsed;
+    } catch { return undefined; }
   }
+
+  // Try direct parse
+  let parsed = tryParse(raw);
+  if (parsed === undefined) {
+    const match = raw.match(/\{[\s\S]*\}|true|false|null|"[^"]*"|'[^']*'/);
+    if (match) parsed = tryParse(match[0]);
+  }
+
+  // If we got a valid non-null value, return it
+  if (parsed !== undefined && parsed !== null) return parsed;
+
+  // If parsed is null (AI explicitly returned null) or parsing failed entirely:
+  // For text fields, fall back to the raw AI text or user message
+  if (campo.tipo === 'texto') {
+    const trimmed = raw.trim();
+    if (trimmed.length > 0 && trimmed !== 'null') {
+      defaultLogger.info('[INTERPRETER]', `fallback AI text: "${trimmed}"`);
+      return trimmed;
+    }
+    // Last resort: use the user's original message for text fields
+    const userTrimmed = userMessage.trim();
+    if (userTrimmed.length > 0 && !isTriggerMessage(userMessage) && !isQuestion(userMessage)) {
+      defaultLogger.info('[INTERPRETER]', `fallback user message: "${userTrimmed}"`);
+      return userTrimmed;
+    }
+  }
+
+  defaultLogger.info('[INTERPRETER]', `returning ${JSON.stringify(parsed)}`);
+  return parsed ?? null;
 }
 
 async function extractValue(env, campo, userMessage, state) {
