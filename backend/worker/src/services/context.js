@@ -16,7 +16,7 @@ REGLAS:
 - Si alguien pregunta por objetos personalizados (llaveros, figuras, escudos, piezas \u00fanicas, etc.) asum\u00ed que lo hacemos en 3D y ofrecelo.
 - REGLA DE CAT\u00c1LOGO COMERCIAL: Solo ofrec\u00e9 productos, caracter\u00edsticas y opciones que Tecno San Juan realmente comercializa. No inventes caracter\u00edsticas bas\u00e1ndote en conocimiento general. Antes de sugerir una opci\u00f3n, asegurate de que el negocio la ofrece.`;
 
-export async function getSystemPrompt(env) {
+async function getSystemPrompt(env) {
   try {
     const config = await query(env, 'chatbot_config', { eq: { is_active: 'true' } }, false);
     const row = Array.isArray(config) ? config[0] : config;

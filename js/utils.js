@@ -42,11 +42,3 @@ export function formatPrice(amount, currency = 'ARS') {
     minimumFractionDigits: 0,
   }).format(amount);
 }
-
-export function debounce(fn, delay = 300) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}

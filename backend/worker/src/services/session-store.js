@@ -5,11 +5,11 @@ const log = defaultLogger;
 const SESSION_TTL = 86400;
 const KV_PREFIX = 'session:';
 
-export function getKvNamespace(env) {
+function getKvNamespace(env) {
   return env.SESSION_KV || null;
 }
 
-export async function getSession(env, sessionId) {
+async function getSession(env, sessionId) {
   const kv = getKvNamespace(env);
   if (!kv) {
     log.info('[SESSION]', 'KV no disponible, omitiendo lectura');
@@ -28,7 +28,7 @@ export async function getSession(env, sessionId) {
   }
 }
 
-export async function saveSession(env, sessionId, data, ttl) {
+async function saveSession(env, sessionId, data, ttl) {
   const kv = getKvNamespace(env);
   if (!kv) {
     log.info('[SESSION]', 'KV no disponible, omitiendo escritura');

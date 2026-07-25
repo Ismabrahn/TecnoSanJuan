@@ -1,4 +1,4 @@
-export class Logger {
+class Logger {
   constructor(sessionId = '', serviceId = '') {
     this.sessionId = sessionId;
     this.serviceId = serviceId;

@@ -23,7 +23,7 @@ export function validatePhone(phone) {
   return clean;
 }
 
-export function buildWhatsAppUrl(phone, message) {
+function buildWhatsAppUrl(phone, message) {
   const validPhone = validatePhone(phone);
   if (!validPhone) return null;
 
@@ -33,7 +33,7 @@ export function buildWhatsAppUrl(phone, message) {
   return url;
 }
 
-export function openWhatsApp(url) {
+function openWhatsApp(url) {
   if (!url) {
     log('ERROR', 'URL inválida, no se puede abrir WhatsApp');
     return false;
