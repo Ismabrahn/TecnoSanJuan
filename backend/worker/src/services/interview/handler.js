@@ -181,12 +181,13 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
 
   const currentField = engine.getNextField(state);
   if (currentField) {
+    log.info('[HANDLER]', `[DEBUG] currentField="${currentField.nombre}" tipo="${currentField.tipo}" msg="${userMessage.substring(0, 40)}"`);
     const value = await extractValue(env, currentField, userMessage, state);
     if (value !== null) {
       engine.markField(state, currentField.nombre, value);
       log.info('[HANDLER]', `Extraído: ${currentField.nombre} = ${JSON.stringify(value)}`);
     } else {
-      log.info('[HANDLER]', `No se pudo extraer valor para: ${currentField.nombre}`);
+      log.info('[HANDLER]', `[DEBUG] extracción falló para: ${currentField.nombre}, msg="${userMessage.substring(0, 40)}"`);
     }
   }
 

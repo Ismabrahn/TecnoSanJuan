@@ -132,9 +132,15 @@ export async function handleChat(request, env) {
       const sessionId = body.session || clientIp;
 
       if (chatContext === '3d_quote' || interview) {
-        // Try to load session from KV for recovery after restart
+        // Prefer client's interview (most recent), fallback to KV for crash recovery
         const kvSession = await getSession(env, sessionId);
-        const interviewInput = kvSession || interview;
+        if (kvSession && !interview) {
+          log.info('[CHAT]', 'Usando estado desde KV (fallback, no hay interview del cliente)');
+        }
+        if (interview && kvSession) {
+          log.info('[CHAT]', 'Cliente envió interview, ignorando KV para evitar stale state');
+        }
+        const interviewInput = interview || kvSession;
 
         const result = await handleInterview(env, interviewInput, userMessage, sessionId);
 
