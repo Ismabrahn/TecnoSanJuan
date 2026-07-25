@@ -2,6 +2,11 @@ name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-04-01"
 
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "SESSION_KV_ID"        # Reemplazar con: wrangler kv:namespace create "SESSION_KV"
+preview_id = "SESSION_KV_PREVIEW_ID"
+
 [env.production.vars]
 ENVIRONMENT = "production"
 SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
@@ -10,6 +15,7 @@ OPENROUTER_MODEL = "openai/gpt-4o-mini"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
 SITE_URL = "https://tecnosanjuan.com"
+WHATSAPP_NUMBER = "+543405480010"
 [env.development]
 vars = { ENVIRONMENT = "development" }
 
@@ -20,3 +26,4 @@ OPENROUTER_MODEL = "openai/gpt-4o-mini"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
 SITE_URL = "https://tecnosanjuan.com"
+WHATSAPP_NUMBER = "+543405480010"

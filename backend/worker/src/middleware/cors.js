@@ -2,6 +2,7 @@ const ALLOWED_ORIGINS = [
   'https://tecnosanjuan.com',
   'https://www.tecnosanjuan.com',
   'https://ismabrahan.github.io',
+  'https://ismabrahn.github.io',
   'http://localhost:8787',
   'http://localhost:5500',
   'http://127.0.0.1:5500',

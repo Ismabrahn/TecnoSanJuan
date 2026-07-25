@@ -13,7 +13,8 @@ REGLAS:
 - Para preguntas generales de tecnolog\u00eda, us\u00e1 la b\u00fasqueda web.
 - No inventes datos sobre Tecno San Juan. Si no est\u00e1 en el contexto, no lo afirmes.
 - S\u00e9 amable, profesional, conciso y en argentino.
-- Si alguien pregunta por objetos personalizados (llaveros, figuras, escudos, piezas \u00fanicas, etc.) asum\u00ed que lo hacemos en 3D y ofrecelo.`;
+- Si alguien pregunta por objetos personalizados (llaveros, figuras, escudos, piezas \u00fanicas, etc.) asum\u00ed que lo hacemos en 3D y ofrecelo.
+- REGLA DE CAT\u00c1LOGO COMERCIAL: Solo ofrec\u00e9 productos, caracter\u00edsticas y opciones que Tecno San Juan realmente comercializa. No inventes caracter\u00edsticas bas\u00e1ndote en conocimiento general. Antes de sugerir una opci\u00f3n, asegurate de que el negocio la ofrece.`;
 
 export async function getSystemPrompt(env) {
   try {
@@ -61,10 +62,30 @@ export async function buildContext(env, userMessage) {
   }
 }
 
-export async function buildMessages(env, context, userMessage, chatContext) {
+export async function buildMessages(env, context, userMessage, chatContext, session = null) {
   const { system, fallback } = await getSystemPrompt(env);
 
   let systemContent = system;
+
+  if (session) {
+    if (session.nombre_cliente) {
+      systemContent += `\n\nDATOS DEL CLIENTE: El cliente se llama "${session.nombre_cliente}". Dirigite a él/ella por su nombre de forma natural y cordial.`;
+    }
+    if (session.estado_actual === 'waiting_name') {
+      systemContent += `\n\nCONTEXTO: Estabas esperando que el cliente te dé su nombre. Si el mensaje del cliente no parece un nombre, respondé de forma natural sin insistir.`;
+    }
+    if (session.estado_actual === 'esperando_necesidad') {
+      systemContent += `\n\nCONTEXTO: El cliente ya dijo su nombre pero todavía no especificó qué servicio necesita. Ayudalo a identificar qué necesita: podés preguntar si busca impresión 3D, cartelería LED, servicio técnico u otro servicio. No inventes servicios que no existen.`;
+    }
+    systemContent += `\n\nREGLA DE DATOS PERSONALES:
+Si Nexus está esperando un dato solicitado previamente:
+- La respuesta del usuario debe tratarse como información del cliente.
+- No debe interpretarse como una pregunta.
+- No debe buscarse en la base de conocimiento.
+- Debe almacenarse en la sesión.
+`;
+  }
+
   if (chatContext) {
     systemContent += `\n\nContexto actual: ${chatContext}`;
   }

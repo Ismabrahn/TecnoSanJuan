@@ -1,6 +1,7 @@
 {
   "name": "tecno-san-juan-worker",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "Cloudflare Worker for Tecno San Juan - API, Chatbot, Admin CRUD",
   "main": "src/index.js",
@@ -8,7 +9,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "logs": "wrangler tail",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "node tests/interview.test.js"
   },
   "dependencies": {
     "jose": "^5.9.6"

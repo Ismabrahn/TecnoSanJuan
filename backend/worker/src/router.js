@@ -7,6 +7,7 @@ import {
   handleAdminDelete,
 } from './handlers/admin.js';
 import { handleUpdatePassword } from './handlers/admin.js';
+import { handleAdminAiAction } from './handlers/admin-ai.js';
 import { handleChat, handleHealth } from './handlers/chat.js';
 import { requireAdmin } from './middleware/auth.js';
 import { handleOptions, getCorsHeaders } from './middleware/cors.js';
@@ -33,6 +34,15 @@ export async function handleRequest(request, env) {
         return errorResponse(request, auth.status, auth.error);
       }
       const response = await handleUpdatePassword(request, env, auth);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/api/admin/ai-action' && request.method === 'POST') {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      const response = await handleAdminAiAction(request, env);
       return addCors(response, corsHeaders);
     }
 

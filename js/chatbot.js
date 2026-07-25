@@ -1,9 +1,11 @@
 import { $, createElement } from './utils.js';
 import { fetchChat, fetchPublic } from './api.js';
+import { createWhatsAppButton, validatePhone } from './whatsapp.js';
 
 let initialized = false;
 let currentContext = '';
 let interviewState = null;
+let sessionState = null;
 let phoneNumber = '';
 let chatbotApi = null;
 
@@ -21,6 +23,7 @@ export async function initChatbot() {
   const input = $('#chatbotInput');
   const send = $('#chatbotSend');
   const messages = $('#chatbotMessages');
+  const progressContainer = $('#chatbotProgress');
 
   if (!toggle || !panel) return;
 
@@ -31,25 +34,46 @@ export async function initChatbot() {
     panel.classList.toggle('hidden', !isOpen);
     toggle.style.display = isOpen ? 'none' : 'flex';
     document.getElementById('chatbot').classList.toggle('chatbot-panel-open', isOpen);
-    if (!open) { currentContext = ''; interviewState = null; input.disabled = false; }
+    if (!open) { currentContext = ''; interviewState = null; sessionState = null; input.disabled = false; }
     if (isOpen) input.focus();
   }
 
   toggle.addEventListener('click', () => togglePanel(true));
   close.addEventListener('click', () => togglePanel(false));
 
-  function addQuoteWhatsApp(summary, phone) {
-    const msg = encodeURIComponent(summary);
-    const waUrl = `https://wa.me/${phone}?text=${msg}`;
-    const btn = createElement('a', { className: 'whatsapp-quote-btn', href: waUrl, target: '_blank', textContent: 'Enviar por WhatsApp' });
-    messages.appendChild(btn);
-    messages.scrollTop = messages.scrollHeight;
+  function updateProgress(progress) {
+    if (!progress) return;
+    const bar = $('#chatbotProgressBar');
+    const label = $('#chatbotProgressLabel');
+    if (bar) bar.style.width = `${progress.percent}%`;
+    if (label) label.textContent = `${progress.completed}/${progress.total}`;
+    if (progressContainer) progressContainer.style.display = 'flex';
+  }
+
+  function renderWhatsAppSection(summary, structuredSummary, phone) {
+    const effectivePhone = phone || phoneNumber;
+    const validated = validatePhone(effectivePhone);
+    if (!validated) {
+      console.log('[CHAT] ERROR: No se puede generar botón WhatsApp - número inválido');
+      addMessage('No pudimos obtener el número de WhatsApp. Contactanos manualmente al WhatsApp de Tecno San Juan.', 'bot');
+      return;
+    }
+
+    const whatsappText = structuredSummary || summary;
+    console.log('[CHAT] resumen estructurado disponible:', !!structuredSummary);
+
+    const btn = createWhatsAppButton(validated, whatsappText);
+    if (btn) {
+      messages.appendChild(btn);
+      messages.scrollTop = messages.scrollHeight;
+    }
     input.disabled = true;
   }
 
   async function sendMessage() {
     const text = input.value.trim();
     if (!text || text.length > 2000) return;
+    console.log('[CHAT] pregunta respondida:', text.substring(0, 60));
 
     input.value = '';
     send.disabled = true;
@@ -59,15 +83,21 @@ export async function initChatbot() {
     const typing = addTypingIndicator();
 
     try {
-      const data = await fetchChat(text, currentContext, interviewState);
+      const data = await fetchChat(text, currentContext, interviewState, sessionState);
       typing.remove();
+      if (data.session) sessionState = data.session;
       if (data.interview) {
         interviewState = data.interview;
         addMessage(data.response, 'bot', 'ai');
+        if (data.progress) updateProgress(data.progress);
         if (data.interview.complete) {
+          console.log('[CHAT] entrevista completa, estado: presupuesto_completo');
           if (data.phone) phoneNumber = data.phone;
-          const whatsappText = data.summary || data.response;
-          addQuoteWhatsApp(whatsappText, data.phone || phoneNumber);
+          renderWhatsAppSection(data.summary, data.structuredSummary, data.phone || phoneNumber);
+          const bar = $('#chatbotProgressBar');
+          if (bar) bar.style.width = '100%';
+          const label = $('#chatbotProgressLabel');
+          if (label) label.textContent = 'Completo';
         }
       } else {
         addMessage(data.response, 'bot', data.source);
@@ -130,7 +160,9 @@ export async function initChatbot() {
     async startChat(context) {
       currentContext = context;
       interviewState = null;
+      sessionState = null;
       messages.innerHTML = '';
+      if (progressContainer) progressContainer.style.display = 'none';
       togglePanel(true);
 
       if (context === '3d_quote') {

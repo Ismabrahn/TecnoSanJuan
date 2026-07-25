@@ -1,0 +1,145 @@
+{
+  "id": "carteleria_led",
+  "name": "Cartelería LED",
+  "label": "Presupuesto de cartelería LED",
+  "description": "Carteles comerciales, logos, neón LED, decoración y carteles personalizados para negocios o particulares.",
+  "schemaVersion": 1,
+  "serviceVersion": "1.0.0",
+  "updatedAt": "2026-07-24T00:00:00Z",
+  "welcome": {
+    "title": "Hola.",
+    "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de cartelería LED. Respondé con la mayor precisión posible."
+  },
+  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de cartelería LED.\n\n{{summary}}\n\nAdjuntá las fotos o archivos por WhatsApp para que podamos cotizarte con mayor precisión.",
+  "summaryHeader": "SOLICITUD DE CARTELERÍA LED",
+  "summaryTemplate": "Hola.\n\nSolicito el siguiente presupuesto de cartelería LED:\n\nCliente:\n{{nombre}}\n\nServicio:\n{{name}}\n\nDATOS DEL PEDIDO:\n{{fields}}\n\nGracias.",
+  "keywords": ["cartel", "carteleria", "led", "neon", "neón", "letrero", "letrero luminoso", "avisador", "cartel luminoso", "luminoso"],
+  "whatsappTarget": "carteleria_led",
+  "catalog": {
+    "forbidden": ["animación", "animaciones", "animacion", "destello", "destellos", "degradado", "degradados", "parpadeo", "parpadeos", "secuencia", "secuencias", "efecto", "efectos", "transición", "transiciones", "transicion", "batería", "bateria", "USB", "usb", "powerbank", "pilas", "cambio de color automático", "modo especial"]
+  },
+  "questions": [
+    {
+      "id": "nombre",
+      "label": "Nombre",
+      "question": "¿Cuál es tu nombre?",
+      "type": "text",
+      "required": true,
+      "validation": {
+        "minLength": 3,
+        "maxLength": 100
+      }
+    },
+    {
+      "id": "tipo_diseno",
+      "label": "Diseño",
+      "question": "Contame un poco sobre el diseño que tenés en mente. ¿Qué texto querés que tenga? ¿Incluye algún ícono, imagen o ilustración?",
+      "type": "text",
+      "required": true,
+      "infer": ["texto", "elementos_graficos"]
+    },
+    {
+      "id": "texto",
+      "label": "Texto del cartel",
+      "type": "text",
+      "required": false,
+      "blocking": false
+    },
+    {
+      "id": "elementos_graficos",
+      "label": "Elementos gráficos",
+      "type": "text",
+      "required": false,
+      "blocking": false
+    },
+    {
+      "id": "imagen_referencia",
+      "label": "Imagen de referencia",
+      "question": "¿Tenés una imagen de referencia?",
+      "type": "boolean",
+      "required": false,
+      "blocking": false
+    },
+    {
+      "id": "medidas",
+      "label": "Medidas",
+      "question": "¿Qué medidas aproximadas va a tener?",
+      "type": "text",
+      "required": true,
+      "validation": {
+        "minLength": 3,
+        "maxLength": 50
+      }
+    },
+    {
+      "id": "ubicacion",
+      "label": "Ubicación",
+      "question": "¿Dónde se va a colocar?",
+      "type": "text",
+      "required": true,
+      "validation": {
+        "minLength": 3,
+        "maxLength": 200
+      }
+    },
+    {
+      "id": "interior_exterior",
+      "label": "Ubicación",
+      "question": "¿Va en interior o exterior?",
+      "type": "select",
+      "options": ["Interior", "Exterior"],
+      "required": true
+    },
+    {
+      "id": "tipo_iluminacion",
+      "label": "Iluminación",
+      "question": "¿Preferís iluminación fija o RGB?",
+      "type": "select",
+      "options": ["Color fijo", "RGB"],
+      "required": true
+    },
+    {
+      "id": "color",
+      "label": "Color",
+      "question": "¿Qué color o colores querés?",
+      "type": "text",
+      "required": false,
+      "blocking": false,
+      "validation": {
+        "minLength": 2,
+        "maxLength": 100
+      }
+    },
+    {
+      "id": "montaje",
+      "label": "Montaje",
+      "question": "¿Cómo se va a instalar?",
+      "type": "select",
+      "options": ["Fijación directa", "Separadores", "Colgado"],
+      "required": false,
+      "blocking": false
+    },
+    {
+      "id": "plazo",
+      "label": "Plazo",
+      "question": "¿Para cuándo lo necesitás?",
+      "type": "text",
+      "required": false,
+      "blocking": false,
+      "validation": {
+        "maxLength": 200
+      }
+    },
+    {
+      "id": "observaciones",
+      "label": "Observaciones",
+      "question": "¿Algún detalle más que debamos tener en cuenta?",
+      "type": "text",
+      "required": false,
+      "blocking": false,
+      "validation": {
+        "maxLength": 500
+      }
+    }
+  ]
+}

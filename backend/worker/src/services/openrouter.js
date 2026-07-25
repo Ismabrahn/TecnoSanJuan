@@ -1,5 +1,10 @@
+const OPENROUTER_TIMEOUT = 25000;
+
 export async function chat(env, messages) {
   const url = `${env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'}/chat/completions`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -10,13 +15,14 @@ export async function chat(env, messages) {
       'X-Title': 'Tecno San Juan',
     },
     body: JSON.stringify({
-      model: env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
+      model: env.OPENROUTER_MODEL || 'openai/gpt-4o-mini-search-preview',
       messages,
       temperature: 0.3,
-      max_tokens: 1024,
+      max_tokens: 2048,
       stream: false,
     }),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
 
   if (!response.ok) {
     const error = await response.text();

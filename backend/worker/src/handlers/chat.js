@@ -1,10 +1,16 @@
 import { buildContext, buildMessages } from '../services/context.js';
 import { chat } from '../services/openrouter.js';
-import { handleInterview } from '../services/interview/index.js';
+import { handleInterview, getEngine, getDefinition } from '../services/interview/index.js';
 import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { query } from '../services/supabase.js';
 import { errorResponse } from '../middleware/error.js';
+import { createSession, extractName, detectWaitingState, detectWaitingNeedState, detectServiceFromMessage, buildNameResponse, STATES } from '../services/conversation/session.js';
+import { detectIntent } from '../services/interview/intention.js';
+import { defaultLogger } from '../services/logger.js';
+import { eventBus, Events } from '../services/interview/event-bus.js';
+import { getSession, saveSession, deleteSession } from '../services/session-store.js';
 
+const log = defaultLogger;
 const RATE_LIMIT_MAP = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX = 40;
@@ -71,6 +77,7 @@ export async function handleHealth(env) {
       service: 'tecno-san-juan-worker',
       timestamp: new Date().toISOString(),
       supabase: 'connected',
+      engineVersion: '2.0.0',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -121,8 +128,25 @@ export async function handleChat(request, env) {
     try {
       const interview = body.interview || null;
 
+      const sessionId = body.session || clientIp;
+
       if (chatContext === '3d_quote' || interview) {
-        const result = await handleInterview(env, interview, userMessage);
+        // Try to load session from KV for recovery after restart
+        const kvSession = await getSession(env, sessionId);
+        const interviewInput = kvSession || interview;
+
+        const result = await handleInterview(env, interviewInput, userMessage, sessionId);
+
+        // Save session to KV (delete if complete)
+        if (sessionId && result.interview) {
+          if (result.interview.complete) {
+            await deleteSession(env, sessionId);
+          } else {
+            await saveSession(env, sessionId, { type: result.interview.type, state: result.interview.state });
+          }
+        }
+
+        log.info('[CHAT]', `Entrevista ${result.interview?.complete ? 'completada' : 'en curso'}`, { sessionId });
 
         let phone = '';
         try {
@@ -138,12 +162,64 @@ export async function handleChat(request, env) {
           if (!phone && phones?.length > 0) {
             phone = (phones[0].phone || phones[0].number || '').replace(/[^0-9]/g, '');
           }
-        } catch (e) {}
+        } catch (e) {
+          log.info('[CHAT]', 'Supabase no disponible, usando fallback');
+        }
+
+        if (!phone) {
+          phone = (env.WHATSAPP_NUMBER || '').replace(/[^0-9]/g, '');
+          if (phone) log.info('[CHAT]', 'Teléfono desde variable de entorno');
+        }
+
+        if (result.interview?.complete && !phone) {
+          log.error('[CHAT]', 'No hay número de WhatsApp configurado');
+        }
 
         return new Response(JSON.stringify({
           response: result.response,
           interview: result.interview,
+          summary: result.summary || null,
+          structuredSummary: result.structuredSummary || null,
+          progress: result.progress || null,
           phone,
+          source: 'ai',
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Proactive intent detection: if user shows clear service intent, start interview
+      const intent = detectIntent(userMessage);
+      if (intent.service && !intent.needsClarification) {
+        log.info('[CHAT]', `Intención detectada: "${intent.service}" (${intent.confidence.toFixed(2)}), iniciando entrevista`);
+        const result = await handleInterview(env, null, userMessage, sessionId);
+        if (sessionId && result.interview) {
+          if (result.interview.complete) {
+            await deleteSession(env, sessionId);
+          } else {
+            await saveSession(env, sessionId, { type: result.interview.type, state: result.interview.state });
+          }
+        }
+        return new Response(JSON.stringify({
+          response: result.response,
+          interview: result.interview,
+          summary: result.summary || null,
+          structuredSummary: result.structuredSummary || null,
+          progress: result.progress || null,
+          source: 'ai',
+        }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const session = body.session || createSession();
+      const preprocessed = await processSessionPre(env, session, userMessage);
+      if (preprocessed) {
+        return new Response(JSON.stringify({
+          response: preprocessed.response,
+          session: preprocessed.session,
+          interview: preprocessed.interview || undefined,
+          context: chatContext,
           source: 'ai',
         }), {
           headers: { 'Content-Type': 'application/json' },
@@ -157,11 +233,14 @@ export async function handleChat(request, env) {
 
       const webContext = formatSearchResults(webResults);
       const combined = context + (webContext ? '\n\n' + webContext : '');
-      const messages = await buildMessages(env, combined, userMessage, chatContext);
+      const messages = await buildMessages(env, combined, userMessage, chatContext, session);
       const response = await chat(env, messages);
+
+      processSessionPost(session, response);
 
       return new Response(JSON.stringify({
         response,
+        session,
         hasContext: combined.length > 0,
         context: chatContext,
         source: 'ai',
@@ -172,7 +251,90 @@ export async function handleChat(request, env) {
       IN_FLIGHT.delete(clientIp);
     }
   } catch (err) {
-    console.error('Chat error:', err.message);
+    log.error('[CHAT]', `Error: ${err.message}`);
     return errorResponse(request, 500, err.message);
+  }
+}
+
+async function processSessionPre(env, session, message) {
+  if (session.estado_actual === STATES.WAITING_NAME) {
+    const name = extractName(message);
+    if (name) {
+      session.nombre_cliente = name;
+      session.estado_actual = STATES.WAITING_NEED;
+      return { response: buildNameResponse(name), session };
+    }
+  }
+
+  if (session.estado_actual === STATES.WAITING_NEED) {
+    const needResult = await processNeedDetection(env, session, message);
+    if (needResult) return needResult;
+  }
+
+  return null;
+}
+
+async function processNeedDetection(env, session, message) {
+  const service = detectServiceFromMessage(message);
+  if (!service) return null;
+
+  if (service === 'servicio_tecnico') {
+    session.estado_actual = STATES.IDENTIFIED;
+    return {
+      response: `Entendido. Para consultas sobre servicio técnico, te recomiendo contactarnos directamente por WhatsApp y uno de nuestros técnicos va a asesorarte. ¿Hay algo más en lo que pueda ayudarte?`,
+      session,
+    };
+  }
+
+  try {
+    const def = getDefinition(service);
+    const eng = getEngine(service);
+    const state = eng.createState();
+    state.nombre = session.nombre_cliente;
+    state.tipo_trabajo = service;
+    state.contexto_servicio_mostrado = true;
+    eng.isComplete(state);
+
+    const nextField = eng.getMissingField(state);
+    if (!nextField) {
+      session.estado_actual = STATES.IDENTIFIED;
+      return {
+        response: `Perfecto ${session.nombre_cliente}. Tenemos todo listo para tu presupuesto de ${def.label || service}.`,
+        session,
+      };
+    }
+
+    const intro = `${def.welcome.title} ${def.welcome.message}`;
+    session.estado_actual = STATES.IDENTIFIED;
+
+    const response = nextField ? `${intro} ${nextField.question}` : intro;
+
+    return {
+      response,
+      session,
+      interview: {
+        type: service,
+        state,
+        complete: false,
+        lastQuestion: response,
+      },
+    };
+  } catch (err) {
+    log.error('[CHAT]', `Error en detección de necesidad: ${err.message}`);
+    return null;
+  }
+}
+
+function processSessionPost(session, aiResponse) {
+  if (session.estado_actual === STATES.IDLE) {
+    const nextState = detectWaitingState(aiResponse);
+    if (nextState) {
+      session.estado_actual = nextState;
+    }
+  } else if (session.estado_actual === STATES.IDENTIFIED) {
+    const needState = detectWaitingNeedState(aiResponse);
+    if (needState) {
+      session.estado_actual = needState;
+    }
   }
 }

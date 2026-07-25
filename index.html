@@ -133,14 +133,14 @@
           <div id="footerInfo" class="footer-info"></div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2026 <span id="footerName">Tecno San Juan</span>. Todos los derechos reservados.</p>
+          <p>&copy; 2026 <span id="footerName">Tecno San Juan</span>. Todos los derechos reservados. 🌀</p>
         </div>
       </div>
     </footer>
   </div>
 
   <div id="chatbot" class="chatbot">
-    <span class="chatbot-label" id="chatbotLabel">Consultá con IA 💬</span>
+    <span class="chatbot-label" id="chatbotLabel">Consultá con IA</span>
     <button id="chatbotToggle" class="chatbot-toggle" aria-label="Abrir chat">
       <svg class="chatbot-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -153,6 +153,12 @@
       <div class="chatbot-header">
         <h3>Chat Tecno San Juan</h3>
         <button id="chatbotClose" aria-label="Cerrar chat">&times;</button>
+      </div>
+      <div id="chatbotProgress" class="chatbot-progress" style="display:none">
+        <div class="chatbot-progress-bar">
+          <div class="chatbot-progress-fill" id="chatbotProgressBar" style="width:0%"></div>
+        </div>
+        <span class="chatbot-progress-label" id="chatbotProgressLabel">0/0</span>
       </div>
       <div id="chatbotMessages" class="chatbot-messages"></div>
       <div class="chatbot-input">
