@@ -1,7 +1,7 @@
 name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-04-01"
-# KV namespace creado manualmente por usuario
+account_id = "57de15affd59c937759222091bcd23bf"
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
