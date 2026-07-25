@@ -1,0 +1,103 @@
+export default {
+  "id": "carteleria_led",
+  "name": "Cartelería LED",
+  "label": "Presupuesto de cartelería LED",
+  "description": "Carteles comerciales, logos, neón LED, decoración y carteles personalizados para negocios o particulares.",
+  "schemaVersion": 2,
+  "serviceVersion": "2.0.0",
+  "updatedAt": "2026-07-25T00:00:00Z",
+  "welcome": {
+    "title": "Hola.",
+    "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de cartelería LED."
+  },
+  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de cartelería LED. Nuestro equipo va a preparar el presupuesto con la información que nos diste. Si tenés fotos o referencias, podés enviarlas por WhatsApp para que podamos cotizarte con mayor precisión.",
+  "summaryHeader": "SOLICITUD DE CARTELERÍA LED",
+  "summaryTemplate": "Hola.\n\nSolicito el siguiente presupuesto de cartelería LED:\n\nCliente:\n{{nombre}}\n\nServicio:\n{{name}}\n\nDATOS DEL PEDIDO:\n{{fields}}\n\nGracias.",
+  "keywords": ["cartel", "carteleria", "led", "neon", "neón", "letrero", "letrero luminoso", "avisador", "cartel luminoso", "luminoso"],
+  "whatsappTarget": "carteleria_led",
+  "catalog": {
+    "forbidden": ["animación", "animaciones", "animacion", "destello", "destellos", "degradado", "degradados", "parpadeo", "parpadeos", "secuencia", "secuencias", "efecto", "efectos", "transición", "transiciones", "transicion", "batería", "bateria", "USB", "usb", "powerbank", "pilas", "cambio de color automático", "modo especial"]
+  },
+  "campos": [
+    {
+      "nombre": "nombre",
+      "etiqueta": "Nombre",
+      "pregunta": "¿Cuál es tu nombre?",
+      "tipo": "texto",
+      "requerido": true
+    },
+    {
+      "nombre": "tipo_diseno",
+      "etiqueta": "Diseño",
+      "pregunta": "Contame un poco sobre el diseño que tenés en mente. ¿Qué texto querés que tenga? ¿Incluye algún ícono, imagen o ilustración?",
+      "tipo": "texto",
+      "requerido": true
+    },
+    {
+      "nombre": "medidas",
+      "etiqueta": "Medidas",
+      "pregunta": "¿Qué medidas aproximadas va a tener?",
+      "tipo": "texto",
+      "requerido": true
+    },
+    {
+      "nombre": "ubicacion",
+      "etiqueta": "Ubicación",
+      "pregunta": "¿Dónde se va a colocar?",
+      "tipo": "texto",
+      "requerido": true
+    },
+    {
+      "nombre": "interior_exterior",
+      "etiqueta": "Ubicación",
+      "pregunta": "¿Va en interior o exterior?",
+      "tipo": "select",
+      "opciones": ["Interior", "Exterior"],
+      "requerido": true
+    },
+    {
+      "nombre": "tipo_iluminacion",
+      "etiqueta": "Iluminación",
+      "pregunta": "¿Preferís iluminación fija o RGB?",
+      "tipo": "select",
+      "opciones": ["Color fijo", "RGB"],
+      "requerido": true
+    },
+    {
+      "nombre": "imagen_referencia",
+      "etiqueta": "Imagen de referencia",
+      "pregunta": "¿Tenés una imagen de referencia?",
+      "tipo": "boolean",
+      "requerido": false
+    },
+    {
+      "nombre": "color",
+      "etiqueta": "Color",
+      "pregunta": "¿Qué color o colores querés?",
+      "tipo": "texto",
+      "requerido": false
+    },
+    {
+      "nombre": "montaje",
+      "etiqueta": "Montaje",
+      "pregunta": "¿Cómo se va a instalar?",
+      "tipo": "select",
+      "opciones": ["Fijación directa", "Separadores", "Colgado"],
+      "requerido": false
+    },
+    {
+      "nombre": "plazo",
+      "etiqueta": "Plazo",
+      "pregunta": "¿Para cuándo lo necesitás?",
+      "tipo": "texto",
+      "requerido": false
+    },
+    {
+      "nombre": "observaciones",
+      "etiqueta": "Observaciones",
+      "pregunta": "¿Algún detalle más que debamos tener en cuenta?",
+      "tipo": "texto",
+      "requerido": false
+    }
+  ]
+};

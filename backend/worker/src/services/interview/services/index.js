@@ -1,10 +1,5 @@
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const impresion_3d = JSON.parse(readFileSync(resolve(__dirname, './impresion_3d.json'), 'utf-8'));
-const carteleria_led = JSON.parse(readFileSync(resolve(__dirname, './carteleria_led.json'), 'utf-8'));
+import impresion_3d from './impresion_3d.js';
+import carteleria_led from './carteleria_led.js';
 import { validateAllServices } from '../catalog-validator.js';
 
 const SERVICES = [impresion_3d, carteleria_led];
