@@ -10,7 +10,7 @@
     "title": "Hola.",
     "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de impresión 3D."
   },
-  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de impresión 3D.\n\n{{summary}}\n\nAdjuntá los archivos STL, fotos o referencias por WhatsApp para que podamos cotizarte con mayor precisión.",
+  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de impresión 3D. Nuestro equipo va a preparar el presupuesto con la información que nos diste. Si tenés fotos, archivos STL o referencias, podés enviarlas por WhatsApp para que podamos cotizarte con mayor precisión.",
   "summaryHeader": "SOLICITUD DE IMPRESIÓN 3D",
   "summaryTemplate": "Hola.\n\nSolicito el siguiente presupuesto de impresión 3D:\n\nCliente:\n{{nombre}}\n\nServicio:\n{{name}}\n\nDATOS DEL PEDIDO:\n{{fields}}\n\nGracias.",
   "keywords": ["imprimir", "impresion", "3d", "llavero", "pieza", "figura", "soporte", "prototipo", "repuesto", "stl", "archivo", "modelo 3d", "diseño 3d"],
@@ -56,7 +56,8 @@
       "nombre": "material",
       "etiqueta": "Material",
       "pregunta": "¿Qué material preferís? Trabajamos con PLA, ABS y resina.",
-      "tipo": "texto",
+      "tipo": "select",
+      "opciones": ["PLA", "ABS", "Resina"],
       "requerido": false
     },
     {

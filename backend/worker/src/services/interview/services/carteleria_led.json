@@ -10,7 +10,7 @@
     "title": "Hola.",
     "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de cartelería LED."
   },
-  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de cartelería LED.\n\n{{summary}}\n\nAdjuntá las fotos o archivos por WhatsApp para que podamos cotizarte con mayor precisión.",
+  "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de cartelería LED. Nuestro equipo va a preparar el presupuesto con la información que nos diste. Si tenés fotos o referencias, podés enviarlas por WhatsApp para que podamos cotizarte con mayor precisión.",
   "summaryHeader": "SOLICITUD DE CARTELERÍA LED",
   "summaryTemplate": "Hola.\n\nSolicito el siguiente presupuesto de cartelería LED:\n\nCliente:\n{{nombre}}\n\nServicio:\n{{name}}\n\nDATOS DEL PEDIDO:\n{{fields}}\n\nGracias.",
   "keywords": ["cartel", "carteleria", "led", "neon", "neón", "letrero", "letrero luminoso", "avisador", "cartel luminoso", "luminoso"],

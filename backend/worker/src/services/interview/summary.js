@@ -33,13 +33,13 @@ export function buildStructuredSummary(schema, state) {
     .map(c => `${c.nombre}: ${state.campos[c.nombre].valor}`);
 }
 
-export function buildCompletionMessage(schema, state, summary) {
-  const template = schema.completionTemplate || '{{summary}}';
+export function buildCompletionMessage(schema, state) {
+  const template = schema.completionTemplate || '¡Perfecto {{nombre}}! Ya tenemos todos los datos. Nuestro equipo va a preparar el presupuesto.';
   let result = template;
   result = result.replace(/\{\{nombre\}\}/g, state.campos?.nombre?.valor || '');
   result = result.replace(/\{\{name\}\}/g, schema.name || schema.id);
-  result = result.replace(/\{\{summary\}\}/g, summary || '');
-  result = result.replace(/\{\{fields\}\}/g, getFieldsText(schema, state));
+  result = result.replace(/\{\{summary\}\}/g, '');
+  result = result.replace(/\{\{fields\}\}/g, '');
   for (const campo of (schema.campos || [])) {
     const ph = `{{${campo.nombre}}}`;
     const val = state.campos[campo.nombre]?.estado === 'completo' ? String(state.campos[campo.nombre].valor) : '';

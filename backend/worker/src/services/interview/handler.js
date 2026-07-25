@@ -21,6 +21,15 @@ function getFirstWord(msg) {
   return msg.trim().toLowerCase().replace(/^[¡!¿?\s]+/, '').split(/[\s,;:]+/)[0];
 }
 
+function isQuestion(msg) {
+  const trimmed = msg.trim();
+  if (!trimmed) return false;
+  if (trimmed.endsWith('?') || trimmed.endsWith('¿')) return true;
+  const qWords = ['cómo', 'como', 'cuándo', 'cuando', 'dónde', 'donde', 'cuál', 'cual', 'qué', 'que', 'quién', 'quien', 'cuánto', 'cuanto', 'por qué', 'porque', 'para qué'];
+  const first = trimmed.toLowerCase().replace(/^[¡!¿?\s]+/, '').split(/[\s,;:]+/)[0];
+  return qWords.includes(first);
+}
+
 const EXTRACT_SYSTEM = `Sos un extractor de datos para presupuestos de Tecno San Juan.
 Respondé ÚNICAMENTE con un valor JSON sin texto adicional.
 
@@ -28,6 +37,8 @@ Reglas:
 - Para tipo "boolean": true o false
 - Para tipo "select": UNO de los valores en "opciones"
 - Para tipo "texto": el texto exacto mencionado por el usuario
+- Si el usuario hace una pregunta en vez de responder: null
+- Si el mensaje es demasiado corto o no tiene sentido como respuesta: null
 - Si no hay suficiente información: null
 - NO inventes datos.
 - NO generes preguntas.
@@ -78,6 +89,8 @@ async function extractWithAI(env, campo, userMessage, state) {
 async function extractValue(env, campo, userMessage, state) {
   if (!campo) return null;
 
+  if (isQuestion(userMessage)) return null;
+
   if (campo.tipo === 'boolean') {
     const first = getFirstWord(userMessage);
     if (first === 'no') return false;
@@ -98,11 +111,56 @@ async function extractValue(env, campo, userMessage, state) {
   }
 
   const extracted = await extractWithAI(env, campo, userMessage, state);
-  if (extracted && typeof extracted === 'string' && extracted.trim()) {
+  if (extracted && typeof extracted === 'string' && extracted.trim().length > 1) {
     return extracted.trim();
   }
-  if (userMessage.trim()) return userMessage.trim();
   return null;
+}
+
+const TRANSITIONS = ['¡Perfecto!', 'Genial.', 'Bien.', 'Entendido.', 'De acuerdo.', 'Excelente.', 'Listo.'];
+
+async function generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema) {
+  const name = state.campos?.nombre?.valor || '';
+
+  if (currentField && isQuestion(userMessage)) {
+    const pregunta = currentField.pregunta || '';
+    const etiqueta = currentField.etiqueta || currentField.nombre || '';
+    try {
+      const aiResponse = await chat(env, [
+        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. El usuario te preguntó algo mientras completaba un presupuesto. Respondé su pregunta de forma breve y útil. Luego, de forma natural, preguntá por el dato que aún necesitás. Usá el nombre del cliente si lo sabés. No seas repetitivo.` },
+        { role: 'user', content: `Cliente: ${name || 'sin nombre'}
+Mensaje: "${userMessage}"
+Dato que necesitamos: ${etiqueta}
+Pregunta original: "${pregunta}"` }
+      ]);
+      return aiResponse;
+    } catch {
+      return `Gracias por tu consulta. ${pregunta}`;
+    }
+  }
+
+  if (currentField && value === null) {
+    const pregunta = currentField.pregunta || '';
+    const etiqueta = currentField.etiqueta || currentField.nombre || '';
+    try {
+      const aiResponse = await chat(env, [
+        { role: 'system', content: `Sos un vendedor cordial de Tecno San Juan. No entendiste bien la respuesta del usuario. Preguntale de nuevo de forma clara y natural, variando un poco la redacción. Sé breve. Usá el nombre del cliente si lo sabés.` },
+        { role: 'user', content: `Cliente: ${name || 'sin nombre'}
+Usuario dijo: "${userMessage}"
+Dato que necesitamos: ${etiqueta}
+Pregunta anterior: "${pregunta}"` }
+      ]);
+      return aiResponse;
+    } catch {
+      return `Disculpá, no entendí bien. ${pregunta}`;
+    }
+  }
+
+  if (!nextField) return null;
+
+  const nextPregunta = nextField.pregunta || '';
+  const transition = TRANSITIONS[Math.floor(Math.random() * TRANSITIONS.length)];
+  return `${transition} ${nextPregunta}`;
 }
 
 export async function handleInterview(env, interview, userMessage, sessionId, prefill = {}) {
@@ -127,11 +185,12 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     }
 
     const firstField = engine.getNextField(state);
+    let firstValue = null;
     if (firstField) {
-      const value = await extractValue(env, firstField, userMessage, state);
-      if (value !== null) {
-        engine.markField(state, firstField.nombre, value);
-        log.info('[HANDLER]', `Extraído de mensaje inicial: ${firstField.nombre} = ${JSON.stringify(value)}`);
+      firstValue = await extractValue(env, firstField, userMessage, state);
+      if (firstValue !== null) {
+        engine.markField(state, firstField.nombre, firstValue);
+        log.info('[HANDLER]', `Extraído de mensaje inicial: ${firstField.nombre} = ${JSON.stringify(firstValue)}`);
       }
     }
 
@@ -141,7 +200,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     const nextField = engine.getNextField(state);
     if (!nextField) {
       const summary = buildSummary(schema, state);
-      const response = buildCompletionMessage(schema, state, summary);
+      const response = buildCompletionMessage(schema, state);
       state.completada = true;
       eventBus.emit(Events.InterviewCompleted, { type: schema.id, state, summary });
       log.info('[HANDLER]', 'Entrevista completada inmediatamente');
@@ -152,7 +211,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
       };
     }
 
-    const nextQ = nextField.pregunta;
+    const nextQ = await generateConversationalResponse(env, firstField, nextField, userMessage, firstValue, state, schema);
     if (schema.welcome && schema.welcome.title) {
       const response = `${schema.welcome.title} ${schema.welcome.message} ${nextQ}`;
       return {
@@ -161,11 +220,9 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
         progress: engine.getProgress(state),
       };
     }
-
-    const response = `Claro, te ayudo con eso. ${nextQ}`;
     return {
-      response,
-      interview: { type: serviceId, state, complete: false, lastQuestion: response },
+      response: nextQ,
+      interview: { type: serviceId, state, complete: false, lastQuestion: nextQ },
       progress: engine.getProgress(state),
     };
   }
@@ -180,9 +237,10 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
   log.info('[HANDLER]', 'Procesando respuesta');
 
   const currentField = engine.getNextField(state);
+  let value = null;
   if (currentField) {
     log.info('[HANDLER]', `[DEBUG] currentField="${currentField.nombre}" tipo="${currentField.tipo}" msg="${userMessage.substring(0, 40)}"`);
-    const value = await extractValue(env, currentField, userMessage, state);
+    value = await extractValue(env, currentField, userMessage, state);
     if (value !== null) {
       engine.markField(state, currentField.nombre, value);
       log.info('[HANDLER]', `Extraído: ${currentField.nombre} = ${JSON.stringify(value)}`);
@@ -196,11 +254,7 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
 
   if (allDone) {
     const summary = buildSummary(schema, state);
-    const structuredSummary = schema.campos
-      .filter(c => state.campos[c.nombre] && state.campos[c.nombre].estado === 'completo')
-      .map(c => `${c.nombre}: ${state.campos[c.nombre].valor}`);
-
-    const response = buildCompletionMessage(schema, state, summary);
+    const response = buildCompletionMessage(schema, state);
 
     eventBus.emit(Events.InterviewCompleted, { type: schema.id, state, summary });
     log.info('[HANDLER]', 'Entrevista completada');
@@ -208,20 +262,19 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     return {
       response,
       summary,
-      structuredSummary,
       interview: { type: schema.id, state, complete: true, lastQuestion: null },
       progress: engine.getProgress(state),
     };
   }
 
   const nextField = engine.getNextField(state);
-  const nextQuestion = nextField?.pregunta || 'Perfecto. ¿Algo más que debamos saber?';
+  const response = await generateConversationalResponse(env, currentField, nextField, userMessage, value, state, schema);
 
   log.info('[HANDLER]', `Siguiente campo: ${nextField?.nombre || 'ninguno'}`);
 
   return {
-    response: nextQuestion,
-    interview: { type: schema.id, state, complete: false, lastQuestion: nextQuestion },
+    response,
+    interview: { type: schema.id, state, complete: false, lastQuestion: response },
     progress: engine.getProgress(state),
   };
 }
