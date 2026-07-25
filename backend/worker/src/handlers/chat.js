@@ -79,6 +79,7 @@ export async function handleHealth(env) {
       supabase: 'connected',
       engineVersion: '3.0.0',
       interviewEngine: 'v3-fields',
+      commit: '44e7d6c5-fix-kv-preference',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -141,6 +142,11 @@ export async function handleChat(request, env) {
           log.info('[CHAT]', 'Cliente envió interview, ignorando KV para evitar stale state');
         }
         const interviewInput = interview || kvSession;
+        if (interviewInput?.state?.campos) {
+          const completos = Object.entries(interviewInput.state.campos)
+            .filter(([_, c]) => c.estado === 'completo').map(([k]) => k);
+          log.info('[CHAT]', `[STATE_TRACE] usando=${interview ? 'cliente' : 'KV'} completos=[${completos.join(',')}] msg="${userMessage.substring(0, 30)}"`);
+        }
 
         const result = await handleInterview(env, interviewInput, userMessage, sessionId);
 
@@ -153,6 +159,11 @@ export async function handleChat(request, env) {
           }
         }
 
+        if (result.interview?.state?.campos) {
+          const completos = Object.entries(result.interview.state.campos)
+            .filter(([_, c]) => c.estado === 'completo').map(([k]) => k);
+          log.info('[CHAT]', `[STATE_TRACE] despues completos=[${completos.join(',')}]`);
+        }
         log.info('[CHAT]', `Entrevista ${result.interview?.complete ? 'completada' : 'en curso'}`, { sessionId });
 
         let phone = '';
