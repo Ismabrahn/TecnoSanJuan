@@ -4,8 +4,8 @@ compatibility_date = "2025-04-01"
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
-id = "SESSION_KV_ID"        # Reemplazar con: wrangler kv:namespace create "SESSION_KV"
-preview_id = "SESSION_KV_PREVIEW_ID"
+id = "0614142e73594eb78ec0feb3f427c0f6"
+preview_id = "0614142e73594eb78ec0feb3f427c0f6"
 
 [env.production.vars]
 ENVIRONMENT = "production"
