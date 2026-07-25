@@ -8,6 +8,10 @@ binding = "SESSION_KV"
 id = "0614142e73594eb78ec0feb3f427c0f6"
 preview_id = "0614142e73594eb78ec0feb3f427c0f6"
 
+[env.production]
+kv_namespaces = [
+  { binding = "SESSION_KV", id = "0614142e73594eb78ec0feb3f427c0f6" }
+]
 [env.production.vars]
 ENVIRONMENT = "production"
 SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
