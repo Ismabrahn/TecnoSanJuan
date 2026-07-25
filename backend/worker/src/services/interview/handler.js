@@ -4,11 +4,16 @@ import { chat } from '../openrouter.js';
 import { buildSummary, buildCompletionMessage } from './summary.js';
 import { defaultLogger } from '../logger.js';
 import { eventBus, Events } from './event-bus.js';
+import { ENGINE_VERSION } from './engine.js';
 
 function normalizeInput(interview) {
   if (!interview || !interview.state) return null;
-  if (interview.state && interview.state.campos) return interview;
-  if (interview.type && interview.state && !interview.state.campos) return null;
+  if (interview.state && interview.state.campos) {
+    if (interview.state.engineVersion === '3.0.0') return interview;
+    defaultLogger.info('[HANDLER]', `Estado con engineVersion=${interview.state.engineVersion}, recreando...`);
+    return null;
+  }
+  defaultLogger.info('[HANDLER]', 'Estado legacy detectado (sin campos), iniciando nuevo');
   return null;
 }
 
@@ -111,6 +116,8 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
     schema = getDefinition(serviceId);
     engine = getEngine(serviceId);
     state = engine.createState();
+    log.info('[HANDLER]', `[INTERVIEW_VERSION] engine="${ENGINE_VERSION}" schemaV=${schema?.schemaVersion} servicio=${serviceId}`);
+    log.info('[HANDLER]', `[INTERVIEW_VERSION] campos=${schema?.campos?.length || 0} primerCampo=${schema?.campos?.[0]?.nombre || 'ninguno'}`);
 
     for (const [key, value] of Object.entries(prefill)) {
       if (state.campos[key]) {
@@ -167,6 +174,9 @@ export async function handleInterview(env, interview, userMessage, sessionId, pr
   engine = getEngine(schema.id);
   state = interview.state;
 
+  const stateVer = state.engineVersion || 'legacy';
+  const stateCampos = Object.keys(state.campos || {}).length;
+  log.info('[HANDLER]', `[INTERVIEW_VERSION] continuando engine="${ENGINE_VERSION}" stateVersion="${stateVer}" camposEnEstado=${stateCampos}`);
   log.info('[HANDLER]', 'Procesando respuesta');
 
   const currentField = engine.getNextField(state);

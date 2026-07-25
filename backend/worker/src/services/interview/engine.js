@@ -16,6 +16,8 @@ export class InterviewEngine {
   createState() {
     const state = {
       servicio: this.schema.id,
+      engineVersion: ENGINE_VERSION,
+      schemaVersion: this.schema.schemaVersion,
       campos: {},
       completada: false,
     };
