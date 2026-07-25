@@ -100,7 +100,7 @@ async function extractValue(env, campo, userMessage, state) {
   return null;
 }
 
-export async function handleInterview(env, interview, userMessage, sessionId) {
+export async function handleInterview(env, interview, userMessage, sessionId, prefill = {}) {
   const log = sessionId ? defaultLogger.withSession(sessionId) : defaultLogger;
   const isNew = !normalizeInput(interview);
 
@@ -112,13 +112,42 @@ export async function handleInterview(env, interview, userMessage, sessionId) {
     engine = getEngine(serviceId);
     state = engine.createState();
 
+    for (const [key, value] of Object.entries(prefill)) {
+      if (state.campos[key]) {
+        engine.markField(state, key, value);
+        log.info('[HANDLER]', `Pre-cargado: ${key} = ${JSON.stringify(value)}`);
+      }
+    }
+
+    const firstField = engine.getNextField(state);
+    if (firstField) {
+      const value = await extractValue(env, firstField, userMessage, state);
+      if (value !== null) {
+        engine.markField(state, firstField.nombre, value);
+        log.info('[HANDLER]', `Extraído de mensaje inicial: ${firstField.nombre} = ${JSON.stringify(value)}`);
+      }
+    }
+
     log.info('[HANDLER]', `Nueva entrevista: ${serviceId}`);
     eventBus.emit(Events.InterviewStarted, { type: serviceId, sessionId });
 
+    const nextField = engine.getNextField(state);
+    if (!nextField) {
+      const summary = buildSummary(schema, state);
+      const response = buildCompletionMessage(schema, state, summary);
+      state.completada = true;
+      eventBus.emit(Events.InterviewCompleted, { type: schema.id, state, summary });
+      log.info('[HANDLER]', 'Entrevista completada inmediatamente');
+      return {
+        response, summary,
+        interview: { type: serviceId, state, complete: true, lastQuestion: null },
+        progress: engine.getProgress(state),
+      };
+    }
+
+    const nextQ = nextField.pregunta;
     if (schema.welcome && schema.welcome.title) {
-      const firstField = engine.getNextField(state);
-      const firstQ = firstField?.pregunta || '¿Cuál es tu nombre?';
-      const response = `${schema.welcome.title} ${schema.welcome.message} ${firstQ}`;
+      const response = `${schema.welcome.title} ${schema.welcome.message} ${nextQ}`;
       return {
         response,
         interview: { type: serviceId, state, complete: false, lastQuestion: response },
@@ -126,9 +155,7 @@ export async function handleInterview(env, interview, userMessage, sessionId) {
       };
     }
 
-    const firstField = engine.getNextField(state);
-    const firstQ = firstField?.pregunta || '¿Cuál es tu nombre?';
-    const response = `Claro, te ayudo con eso. ${firstQ}`;
+    const response = `Claro, te ayudo con eso. ${nextQ}`;
     return {
       response,
       interview: { type: serviceId, state, complete: false, lastQuestion: response },

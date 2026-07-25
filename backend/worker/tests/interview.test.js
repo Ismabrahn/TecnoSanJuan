@@ -864,10 +864,110 @@ group('REGRESSION: Errores historicos', () => {
     assert.ok(forbidden.some(f => f.includes('animación')), 'animacion debe estar en forbidden');
     assert.ok(forbidden.some(f => f.includes('USB')), 'USB debe estar en forbidden');
   });
+
+  test('REGRESSION: engine.js NO tiene getMissingField (API vieja eliminada)', () => {
+    const engineContent = readFileSync(new URL('../src/services/interview/engine.js', import.meta.url), 'utf8');
+    assert.ok(!engineContent.includes('getMissingField'), 'getMissingField debe haber sido eliminado');
+  });
+
+  test('REGRESSION: handler.js NO importa resolver.js ni interpreter.js', () => {
+    const handlerContent = readFileSync(new URL('../src/services/interview/handler.js', import.meta.url), 'utf8');
+    assert.ok(!handlerContent.includes('resolver'), 'handler no debe importar resolver.js');
+    assert.ok(!handlerContent.includes('interpreter'), 'handler no debe importar interpreter.js');
+    assert.ok(!handlerContent.includes('anti-loop'), 'handler no debe importar anti-loop.js');
+  });
+
+  test('REGRESSION: chat.js NO usa getMissingField', () => {
+    const chatContent = readFileSync(new URL('../src/handlers/chat.js', import.meta.url), 'utf8');
+    assert.ok(!chatContent.includes('getMissingField'), 'chat.js no debe usar getMissingField');
+  });
 });
 
 // ================================================================
-// FINAL REPORT
+// INTEGRACION: FLUJO COMPLETO VÍA ENGINE
+// ================================================================
+group('INTEGRACION: Flujo completo via Engine', () => {
+
+  group('Flujo normal: requeridos primero, opcionales despues', () => {
+    test('Engine avanza nombre→pieza→medidas→cantidad→archivo_stl→...', () => {
+      const eng = new InterviewEngine(schema);
+      const state = eng.createState();
+
+      const expected = [
+        { nombre: 'nombre', valor: 'Ismael' },
+        { nombre: 'pieza', valor: 'soporte para telefono' },
+        { nombre: 'medidas', valor: '10x10cm' },
+        { nombre: 'cantidad', valor: '3' },
+        { nombre: 'archivo_stl', valor: false },
+      ];
+
+      for (const step of expected) {
+        const field = eng.getNextField(state);
+        assertEqual(field.nombre, step.nombre, `Siguiente debe ser "${step.nombre}"`);
+        eng.markField(state, step.nombre, step.valor);
+      }
+
+      assert.ok(eng.isComplete(state), 'isComplete=true (opcionales no bloquean)');
+
+      const remaining = ['material', 'color', 'plazo', 'observaciones'];
+      for (const name of remaining) {
+        const field = eng.getNextField(state);
+        assertEqual(field.nombre, name, `Siguiente opcional debe ser "${name}"`);
+        eng.markField(state, name, 'test');
+      }
+
+      assert.ok(eng.isComplete(state), 'Completo despues de todos los campos');
+      assert.ok(state.completada, 'state.completada = true');
+    });
+  });
+
+  group('Caso critico: STL bug - usuario dice "no"', () => {
+    test('archivo_stl=false completa el campo y no se repite', () => {
+      const eng = new InterviewEngine(schema);
+      const state = eng.createState();
+
+      // Avanzar hasta archivo_stl (despues de todos los requeridos)
+      eng.markField(state, 'nombre', 'Ismael');
+      eng.markField(state, 'pieza', 'soporte');
+      eng.markField(state, 'medidas', '10x10');
+      eng.markField(state, 'cantidad', '1');
+
+      // archivo_stl es el siguiente
+      assertEqual(eng.getNextField(state).nombre, 'archivo_stl', 'archivo_stl debe ser el siguiente');
+
+      // Usuario dice "No" → false
+      eng.markField(state, 'archivo_stl', false);
+      assertEqual(state.campos.archivo_stl.valor, false, 'valor = false');
+      assertEqual(state.campos.archivo_stl.estado, 'completo', 'estado = completo');
+
+      // archivo_stl NO debe aparecer de nuevo
+      const next = eng.getNextField(state);
+      assert.notEqual(next?.nombre, 'archivo_stl', 'NUNCA debe repetir archivo_stl');
+      assertEqual(next?.nombre, 'material', 'Siguiente debe ser el proximo opcional');
+    });
+  });
+
+  group('Caso critico: usuario dice "no tengo STL" desde el inicio', () => {
+    test('Engine procesa en orden correcto sin saltos', () => {
+      const eng = new InterviewEngine(schema);
+      const state = eng.createState();
+
+      // El usuario nunca menciona STL voluntariamente
+      // El engine avanza en orden natural
+      const fields = eng.getPendingFields(state);
+      const first = fields[0];
+      assertEqual(first.nombre, 'nombre', 'Primero debe ser nombre (requerido)');
+
+      // Completar en orden
+      eng.markField(state, 'nombre', 'Ismael');
+      eng.markField(state, 'pieza', 'soporte');
+
+      // medidas es el siguiente (requerido, viene antes que archivo_stl)
+      assertEqual(eng.getNextField(state).nombre, 'medidas', 'medidas antes que archivo_stl');
+    });
+  });
+});
+
 // ================================================================
 await _runTests();
 const total = passed + failed;

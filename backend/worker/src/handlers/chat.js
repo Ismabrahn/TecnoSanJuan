@@ -1,6 +1,6 @@
 import { buildContext, buildMessages } from '../services/context.js';
 import { chat } from '../services/openrouter.js';
-import { handleInterview, getEngine, getDefinition } from '../services/interview/index.js';
+import { handleInterview } from '../services/interview/index.js';
 import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { query } from '../services/supabase.js';
 import { errorResponse } from '../middleware/error.js';
@@ -77,7 +77,8 @@ export async function handleHealth(env) {
       service: 'tecno-san-juan-worker',
       timestamp: new Date().toISOString(),
       supabase: 'connected',
-      engineVersion: '2.0.0',
+      engineVersion: '3.0.0',
+      interviewEngine: 'v3-fields',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -278,49 +279,31 @@ async function processNeedDetection(env, session, message) {
   const service = detectServiceFromMessage(message);
   if (!service) return null;
 
+  session.estado_actual = STATES.IDENTIFIED;
+
   if (service === 'servicio_tecnico') {
-    session.estado_actual = STATES.IDENTIFIED;
     return {
       response: `Entendido. Para consultas sobre servicio técnico, te recomiendo contactarnos directamente por WhatsApp y uno de nuestros técnicos va a asesorarte. ¿Hay algo más en lo que pueda ayudarte?`,
       session,
     };
   }
 
+  const prefill = {};
+  if (session.nombre_cliente) {
+    prefill.nombre = session.nombre_cliente;
+  }
+
   try {
-    const def = getDefinition(service);
-    const eng = getEngine(service);
-    const state = eng.createState();
-    state.nombre = session.nombre_cliente;
-    state.tipo_trabajo = service;
-    state.contexto_servicio_mostrado = true;
-    eng.isComplete(state);
-
-    const nextField = eng.getMissingField(state);
-    if (!nextField) {
-      session.estado_actual = STATES.IDENTIFIED;
-      return {
-        response: `Perfecto ${session.nombre_cliente}. Tenemos todo listo para tu presupuesto de ${def.label || service}.`,
-        session,
-      };
-    }
-
-    const intro = `${def.welcome.title} ${def.welcome.message}`;
-    session.estado_actual = STATES.IDENTIFIED;
-
-    const response = nextField ? `${intro} ${nextField.question}` : intro;
-
+    const result = await handleInterview(env, null, message, null, prefill);
+    log.info('[CHAT]', `Entrevista iniciada para: ${service}`, { sessionId: session.sessionId });
     return {
-      response,
+      response: result.response,
       session,
-      interview: {
-        type: service,
-        state,
-        complete: false,
-        lastQuestion: response,
-      },
+      interview: result.interview,
     };
   } catch (err) {
-    log.error('[CHAT]', `Error en detección de necesidad: ${err.message}`);
+    log.error('[CHAT]', `[INTERVIEW ERROR] processNeedDetection falló al iniciar entrevista para ${service}: ${err.message}`);
+    log.error('[CHAT]', `[INTERVIEW ERROR] Ruta antigua detectada y reemplazada. Usar solo handleInterview().`);
     return null;
   }
 }
