@@ -104,6 +104,8 @@ async function extractValue(env, campo, userMessage, state) {
     if (lowerTrimmed.startsWith('no sé') || lowerTrimmed.startsWith('no se') || lowerTrimmed === 'no sé' || lowerTrimmed === 'no se') return null;
     if (first === 'no') return false;
     if (['sí', 'si', 'yes', 's'].includes(first)) return true;
+    if (lowerTrimmed.startsWith('tengo ') || lowerTrimmed === 'tengo' || lowerTrimmed === 'si tengo' || lowerTrimmed === 'sí tengo') return true;
+    if (lowerTrimmed.startsWith('no tengo ') || lowerTrimmed === 'no tengo') return false;
     const extracted = await extractWithAI(env, campo, userMessage, state);
     if (typeof extracted === 'boolean') return extracted;
     return null;
