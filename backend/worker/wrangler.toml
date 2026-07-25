@@ -1,6 +1,6 @@
 name = "tecno-san-juan"
 main = "src/index.js"
-compatibility_date = "2025-04-01"
+compatibility_date = "2025-07-25"
 account_id = "57de15affd59c937759222091bcd23bf"
 
 [[kv_namespaces]]
