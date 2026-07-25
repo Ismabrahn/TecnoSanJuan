@@ -119,6 +119,28 @@ export async function initChatbot() {
     }
   });
 
+  const resetBtn = $('#chatbotReset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      resetBtn.disabled = true;
+      try {
+        const data = await fetchChat('', null, null, sessionState, 'reset');
+        currentContext = '';
+        interviewState = null;
+        sessionState = null;
+        messages.innerHTML = '';
+        if (progressContainer) progressContainer.style.display = 'none';
+        addMessage(data.response || 'Bien, empecemos de nuevo. Decime qué necesitás y te ayudo.', 'bot');
+        input.disabled = false;
+        input.focus();
+      } catch {
+        addMessage('No se pudo reiniciar. Intentá de nuevo.', 'bot');
+      } finally {
+        resetBtn.disabled = false;
+      }
+    });
+  }
+
   function addMessage(text, type, source) {
     const msg = createElement('div', { className: `message ${type}` });
     msg.textContent = text;

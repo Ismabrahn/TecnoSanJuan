@@ -10,11 +10,12 @@ export async function fetchPublic(resource) {
   return res.json();
 }
 
-export async function fetchChat(message, context = '', interview = null, session = null) {
+export async function fetchChat(message, context = '', interview = null, session = null, action = null) {
   const body = { message };
   if (context) body.context = context;
   if (interview) body.interview = interview;
   if (session) body.session = session;
+  if (action) body.action = action;
 
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
