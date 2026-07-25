@@ -3,51 +3,47 @@ import { eventBus, Events } from './event-bus.js';
 
 const log = defaultLogger;
 
-function fillTemplate(template, state, schema, fieldsText) {
-  let result = template;
-  result = result.replace(/\{\{nombre\}\}/g, state.nombre || '');
-  result = result.replace(/\{\{name\}\}/g, schema.name || schema.id);
-  result = result.replace(/\{\{fields\}\}/g, fieldsText || '');
-  result = result.replace(/\{\{summary\}\}/g, '');
-  for (const q of (schema.questions || [])) {
-    const ph = `{{${q.id}}}`;
-    result = result.replace(new RegExp(ph, 'g'), state[q.id] !== null && state[q.id] !== '---' ? String(state[q.id]) : '');
-  }
-  return result.trim();
-}
-
 function getFieldsText(schema, state) {
-  return schema.questions
-    .filter(q => q.id !== 'nombre' && state[q.id] !== null && state[q.id] !== '---' && state[q.id] !== undefined)
-    .map(q => `- ${q.label || q.id}: ${state[q.id]}`)
+  return schema.campos
+    .filter(c => c.nombre !== 'nombre' && state.campos[c.nombre] && state.campos[c.nombre].estado === 'completo')
+    .map(c => `- ${c.etiqueta || c.nombre}: ${state.campos[c.nombre].valor}`)
     .join('\n');
 }
 
 export function buildSummary(schema, state) {
   const fieldsText = getFieldsText(schema, state);
-  const result = fillTemplate(schema.summaryTemplate || 'Resumen:\n\n{{fields}}', state, schema, fieldsText);
-
+  let result = schema.summaryTemplate || 'Resumen:\n\n{{fields}}';
+  result = result.replace(/\{\{nombre\}\}/g, state.campos?.nombre?.valor || '');
+  result = result.replace(/\{\{name\}\}/g, schema.name || schema.id);
+  result = result.replace(/\{\{fields\}\}/g, fieldsText || '');
+  result = result.replace(/\{\{summary\}\}/g, '');
+  for (const campo of (schema.campos || [])) {
+    const ph = `{{${campo.nombre}}}`;
+    const val = state.campos[campo.nombre]?.estado === 'completo' ? String(state.campos[campo.nombre].valor) : '';
+    result = result.replace(new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
+  }
   log.info('[SUMMARY]', 'Resumen generado');
   eventBus.emit(Events.SummaryGenerated, { schema: schema.id, state });
-  return result;
+  return result.trim();
 }
 
 export function buildStructuredSummary(schema, state) {
-  return schema.questions
-    .filter(q => state[q.id] !== null && state[q.id] !== '---' && state[q.id] !== undefined)
-    .map(q => `${q.id}: ${state[q.id]}`);
+  return schema.campos
+    .filter(c => state.campos[c.nombre] && state.campos[c.nombre].estado === 'completo')
+    .map(c => `${c.nombre}: ${state.campos[c.nombre].valor}`);
 }
 
 export function buildCompletionMessage(schema, state, summary) {
   const template = schema.completionTemplate || '{{summary}}';
   let result = template;
-  result = result.replace(/\{\{nombre\}\}/g, state.nombre || '');
+  result = result.replace(/\{\{nombre\}\}/g, state.campos?.nombre?.valor || '');
   result = result.replace(/\{\{name\}\}/g, schema.name || schema.id);
-  result = result.replace(/\{\{summary\}\}/g, summary);
+  result = result.replace(/\{\{summary\}\}/g, summary || '');
   result = result.replace(/\{\{fields\}\}/g, getFieldsText(schema, state));
-  for (const q of (schema.questions || [])) {
-    const ph = `{{${q.id}}}`;
-    result = result.replace(new RegExp(ph, 'g'), state[q.id] !== null && state[q.id] !== '---' ? String(state[q.id]) : '');
+  for (const campo of (schema.campos || [])) {
+    const ph = `{{${campo.nombre}}}`;
+    const val = state.campos[campo.nombre]?.estado === 'completo' ? String(state.campos[campo.nombre].valor) : '';
+    result = result.replace(new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
   }
   return result.trim();
 }

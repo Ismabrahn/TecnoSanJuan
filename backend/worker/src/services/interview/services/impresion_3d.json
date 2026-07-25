@@ -3,124 +3,82 @@
   "name": "Impresión 3D",
   "label": "Presupuesto de impresión 3D",
   "description": "Repuestos, piezas personalizadas, prototipos, decoración, accesorios y soluciones a medida en impresión 3D.",
-  "schemaVersion": 1,
-  "serviceVersion": "1.0.0",
-  "updatedAt": "2026-07-24T00:00:00Z",
+  "schemaVersion": 2,
+  "serviceVersion": "2.0.0",
+  "updatedAt": "2026-07-25T00:00:00Z",
   "welcome": {
     "title": "Hola.",
-    "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de impresión 3D. Respondé con la mayor precisión posible."
+    "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto de impresión 3D."
   },
   "completionTemplate": "¡Perfecto {{nombre}}! Ya tenemos todos los datos para tu presupuesto de impresión 3D.\n\n{{summary}}\n\nAdjuntá los archivos STL, fotos o referencias por WhatsApp para que podamos cotizarte con mayor precisión.",
   "summaryHeader": "SOLICITUD DE IMPRESIÓN 3D",
   "summaryTemplate": "Hola.\n\nSolicito el siguiente presupuesto de impresión 3D:\n\nCliente:\n{{nombre}}\n\nServicio:\n{{name}}\n\nDATOS DEL PEDIDO:\n{{fields}}\n\nGracias.",
   "keywords": ["imprimir", "impresion", "3d", "llavero", "pieza", "figura", "soporte", "prototipo", "repuesto", "stl", "archivo", "modelo 3d", "diseño 3d"],
   "whatsappTarget": "3d",
-  "catalog": {
-    "forbidden": []
-  },
-  "questions": [
+  "catalog": { "forbidden": [] },
+  "campos": [
     {
-      "id": "nombre",
-      "label": "Nombre",
-      "question": "¿Cuál es tu nombre?",
-      "type": "text",
-      "required": true,
-      "validation": {
-        "minLength": 3,
-        "maxLength": 100
-      }
+      "nombre": "nombre",
+      "etiqueta": "Nombre",
+      "pregunta": "¿Cuál es tu nombre?",
+      "tipo": "texto",
+      "requerido": true
     },
     {
-      "id": "pieza",
-      "label": "Pieza",
-      "question": "¿Qué pieza o parte necesitás imprimir?",
-      "type": "text",
-      "required": true,
-      "validation": {
-        "minLength": 3,
-        "maxLength": 200
-      }
+      "nombre": "pieza",
+      "etiqueta": "Pieza",
+      "pregunta": "¿Qué pieza o parte necesitás imprimir?",
+      "tipo": "texto",
+      "requerido": true
     },
     {
-      "id": "archivo",
-      "label": "Archivo STL",
-      "question": "¿Tenés un archivo STL o diseño 3D?",
-      "type": "boolean",
-      "required": true
+      "nombre": "archivo_stl",
+      "etiqueta": "Archivo STL",
+      "pregunta": "¿Tenés un archivo STL o diseño 3D?",
+      "tipo": "boolean",
+      "requerido": false
     },
     {
-      "id": "requiere_diseno",
-      "label": "Requiere diseño",
-      "question": "¿Necesitás que te ayudemos con el diseño?",
-      "type": "boolean",
-      "required": false,
-      "blocking": false,
-      "skipIf": { "field": "archivo", "value": true }
+      "nombre": "medidas",
+      "etiqueta": "Medidas",
+      "pregunta": "¿Qué medidas tiene la pieza?",
+      "tipo": "texto",
+      "requerido": true
     },
     {
-      "id": "medidas",
-      "label": "Medidas",
-      "question": "¿Qué medidas tiene la pieza?",
-      "type": "text",
-      "required": true,
-      "validation": {
-        "minLength": 3,
-        "maxLength": 50
-      }
+      "nombre": "cantidad",
+      "etiqueta": "Cantidad",
+      "pregunta": "¿Cuántas unidades necesitás?",
+      "tipo": "texto",
+      "requerido": true
     },
     {
-      "id": "cantidad",
-      "label": "Cantidad",
-      "question": "¿Cuántas unidades necesitás?",
-      "type": "text",
-      "required": true,
-      "validation": {
-        "minLength": 1,
-        "maxLength": 10
-      }
+      "nombre": "material",
+      "etiqueta": "Material",
+      "pregunta": "¿Qué material preferís? Trabajamos con PLA, ABS y resina.",
+      "tipo": "texto",
+      "requerido": false
     },
     {
-      "id": "material",
-      "label": "Material",
-      "question": "¿Qué material preferís? Trabajamos con PLA, ABS y resina.",
-      "type": "text",
-      "required": false,
-      "blocking": false,
-      "validation": {
-        "maxLength": 100
-      }
+      "nombre": "color",
+      "etiqueta": "Color",
+      "pregunta": "¿De qué color lo querés?",
+      "tipo": "texto",
+      "requerido": false
     },
     {
-      "id": "color",
-      "label": "Color",
-      "question": "¿De qué color lo querés?",
-      "type": "text",
-      "required": false,
-      "blocking": false,
-      "validation": {
-        "maxLength": 100
-      }
+      "nombre": "plazo",
+      "etiqueta": "Plazo",
+      "pregunta": "¿Para cuándo lo necesitás?",
+      "tipo": "texto",
+      "requerido": false
     },
     {
-      "id": "plazo",
-      "label": "Plazo",
-      "question": "¿Para cuándo lo necesitás?",
-      "type": "text",
-      "required": false,
-      "validation": {
-        "maxLength": 200
-      }
-    },
-    {
-      "id": "observaciones",
-      "label": "Observaciones",
-      "question": "¿Algún detalle más que debamos tener en cuenta?",
-      "type": "text",
-      "required": false,
-      "blocking": false,
-      "validation": {
-        "maxLength": 500
-      }
+      "nombre": "observaciones",
+      "etiqueta": "Observaciones",
+      "pregunta": "¿Algún detalle más que debamos tener en cuenta?",
+      "tipo": "texto",
+      "requerido": false
     }
   ]
 }

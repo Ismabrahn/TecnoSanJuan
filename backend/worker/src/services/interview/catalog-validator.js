@@ -4,7 +4,7 @@ export function validateServiceSchema(schema) {
   if (!schema.id) errors.push('Falta "id"');
   if (!schema.name) errors.push('Falta "name"');
   if (!schema.description) errors.push(`"${schema.id || '?'}": falta "description"`);
-  if (!Array.isArray(schema.questions)) errors.push(`"${schema.id || '?'}": falta o inválido "questions"`);
+  if (!Array.isArray(schema.campos)) errors.push(`"${schema.id || '?'}": falta o inválido "campos"`);
   if (!schema.summaryTemplate) errors.push(`"${schema.id || '?'}": falta "summaryTemplate"`);
   if (!schema.completionTemplate) errors.push(`"${schema.id || '?'}": falta "completionTemplate"`);
   if (!schema.welcome) errors.push(`"${schema.id || '?'}": falta sección "welcome"`);
@@ -18,40 +18,19 @@ export function validateServiceSchema(schema) {
 
   const ids = new Set();
 
-  for (const q of (schema.questions || [])) {
-    if (!q.id) { errors.push(`"${schema.id}": pregunta sin "id"`); continue; }
+  for (const campo of (schema.campos || [])) {
+    if (!campo.nombre) { errors.push(`"${schema.id}": campo sin "nombre"`); continue; }
 
-    if (ids.has(q.id)) errors.push(`"${schema.id}": ID duplicado "${q.id}"`);
-    ids.add(q.id);
+    if (ids.has(campo.nombre)) errors.push(`"${schema.id}": nombre duplicado "${campo.nombre}"`);
+    ids.add(campo.nombre);
 
-    if (!q.label) errors.push(`"${schema.id}": "${q.id}" sin "label"`);
+    if (!campo.etiqueta) errors.push(`"${schema.id}": "${campo.nombre}" sin "etiqueta"`);
+    if (!campo.tipo) errors.push(`"${schema.id}": "${campo.nombre}" sin "tipo"`);
 
-    if (q.question && q.type !== 'inferred' && !q.label) {
-      errors.push(`"${schema.id}": "${q.id}" tiene question pero no label`);
-    }
-
-    if (q.dependsOn) {
-      const depends = Array.isArray(q.dependsOn) ? q.dependsOn : [q.dependsOn];
-      for (const dep of depends) {
-        const exists = schema.questions.some(sq => sq.id === dep.field);
-        if (!exists) errors.push(`"${schema.id}": "${q.id}" dependsOn.field "${dep.field}" no existe`);
-      }
-    }
-
-    if (q.skipIf) {
-      const clauses = Array.isArray(q.skipIf) ? q.skipIf : [q.skipIf];
-      for (const clause of clauses) {
-        if (clause.field) {
-          const exists = schema.questions.some(sq => sq.id === clause.field);
-          if (!exists) errors.push(`"${schema.id}": "${q.id}" skipIf.field "${clause.field}" no existe`);
-        }
-      }
-    }
-
-    if (q.type === 'select' && q.options) {
+    if (campo.tipo === 'select' && campo.opciones) {
       const opts = new Set();
-      for (const opt of q.options) {
-        if (opts.has(opt)) errors.push(`"${schema.id}": "${q.id}" opción duplicada "${opt}"`);
+      for (const opt of campo.opciones) {
+        if (opts.has(opt)) errors.push(`"${schema.id}": "${campo.nombre}" opción duplicada "${opt}"`);
         opts.add(opt);
       }
     }
@@ -67,7 +46,7 @@ export function validateServiceSchema(schema) {
     for (const ph of matches) {
       const name = ph.replace(/\{\{|\}\}/g, '');
       if (validPlaceholders.has(name)) continue;
-      const exists = schema.questions.some(sq => sq.id === name);
+      const exists = (schema.campos || []).some(c => c.nombre === name);
       if (!exists) errors.push(`"${schema.id}": placeholder "{{${name}}}" en ${tplKey} no tiene campo correspondiente`);
     }
   }

@@ -1,13 +1,6 @@
-import { detectService, getAllServices } from './services/index.js';
-import { defaultLogger } from '../logger.js';
-
-const log = defaultLogger;
+import { getAllServices } from './services/index.js';
 
 const CONFIDENCE_THRESHOLD = 0.45;
-
-const NEGATION_PATTERNS = [
-  /^(no|no sé|no se|no tengo|no quiero|no necesito|nunca|jamás|nada)/i,
-];
 
 const GREETING_PATTERNS = [
   /^(hola|buenas|buen[ao]s|hey|que tal|qué tal|como estas|cómo estás|saludos)/i,
@@ -15,10 +8,6 @@ const GREETING_PATTERNS = [
 
 function isGreeting(message) {
   return GREETING_PATTERNS.some(p => p.test(message.trim()));
-}
-
-function isNegation(message) {
-  return NEGATION_PATTERNS.some(p => p.test(message.trim()));
 }
 
 function keywordMatchScore(message, keywords) {
@@ -42,10 +31,6 @@ function detectIntent(message) {
     return { service: null, confidence: 0, needsClarification: false, reason: 'greeting' };
   }
 
-  if (isNegation(message)) {
-    return { service: null, confidence: 0, needsClarification: false, reason: 'negation' };
-  }
-
   const services = getAllServices();
   let bestService = null;
   let bestScore = 0;
@@ -59,7 +44,6 @@ function detectIntent(message) {
   }
 
   if (bestScore >= CONFIDENCE_THRESHOLD) {
-    log.info('[INTENTION]', `Servicio detectado: "${bestService}" (confianza: ${bestScore.toFixed(2)})`);
     return {
       service: bestService,
       confidence: bestScore,
@@ -70,7 +54,6 @@ function detectIntent(message) {
 
   if (bestScore > 0 && bestScore < CONFIDENCE_THRESHOLD) {
     const svc = services.find(s => s.id === bestService);
-    log.info('[INTENTION]', `Confianza baja para "${bestService}" (${bestScore.toFixed(2)}), necesita aclaración`);
     return {
       service: bestService,
       confidence: bestScore,
