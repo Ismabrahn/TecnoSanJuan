@@ -112,6 +112,20 @@ export async function handleChat(request, env) {
     const userMessage = (body.message || '').trim();
     const chatContext = (body.context || '').trim();
 
+    // Reset action: delete session and restart (before message validation)
+    if (body.action === 'reset') {
+      const sessionId = body.session || clientIp;
+      await deleteSession(env, sessionId);
+      return new Response(JSON.stringify({
+        response: 'Bien, empecemos de nuevo. Decime qué necesitás y te ayudo.',
+        interview: null,
+        session: null,
+        source: 'ai',
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!userMessage) {
       return errorResponse(request, 400, 'El mensaje no puede estar vacío');
     }
