@@ -1,6 +1,7 @@
 name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-04-01"
+# KV namespace creado manualmente por usuario
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
