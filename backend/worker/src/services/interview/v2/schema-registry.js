@@ -1,6 +1,3 @@
-import { readFile, readdir } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv/dist/ajv.js';
 import addFormats from 'ajv-formats';
 import draft2020Schema from 'ajv/dist/refs/json-schema-2020-12/index.js';
@@ -13,18 +10,18 @@ import {
 } from './constants.js';
 import { deepFreeze } from './utils.js';
 import { SchemaError } from './errors.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { BUILT_IN_SCHEMAS, META_SCHEMA } from './schema-index.js';
 
 export class SchemaRegistry {
   #cache;
   #ajv;
   #metaSchemaId;
-  #schemasDir;
 
   constructor(options = {}) {
     this.#cache = new Map();
-    this.#schemasDir = options.schemasDir || path.join(__dirname, 'schemas');
+    // schemasDir option is kept for API compatibility but ignored;
+    // schemas are now bundled as static ES module imports.
+    void options.schemasDir;
     this.#ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(this.#ajv);
     this.#metaSchemaId = null;
@@ -37,7 +34,7 @@ export class SchemaRegistry {
 
     await this.#ensureMetaSchema();
 
-    const schema = await this.#loadFromDisk(serviceId);
+    const schema = await this.#loadBuiltIn(serviceId);
 
     this.#validateMeta(schema, serviceId);
 
@@ -50,15 +47,7 @@ export class SchemaRegistry {
   }
 
   async list() {
-    try {
-      const files = await readdir(this.#schemasDir);
-      return files
-        .filter(f => f.endsWith('.json'))
-        .map(f => f.replace(/\.json$/, ''));
-    } catch (err) {
-      if (err.code === 'ENOENT') return [];
-      throw err;
-    }
+    return Object.keys(BUILT_IN_SCHEMAS);
   }
 
   register(schema) {
@@ -84,27 +73,11 @@ export class SchemaRegistry {
 
     this.#ajv.addSchema(draft2020Schema, 'https://json-schema.org/draft/2020-12/schema');
 
-    const metaPath = path.join(__dirname, 'interview.meta-schema.json');
-    let raw;
-    try {
-      raw = await readFile(metaPath, 'utf-8');
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        throw new SchemaError(
-          'SCHEMA_META_NOT_FOUND',
-          `Meta-schema not found at: ${metaPath}`,
-          null
-        );
-      }
-      throw err;
-    }
-
-    const metaSchema = JSON.parse(raw);
-    this.#metaSchemaId = metaSchema.$id;
-    this.#ajv.addSchema(metaSchema, this.#metaSchemaId);
+    this.#metaSchemaId = META_SCHEMA.$id;
+    this.#ajv.addSchema(META_SCHEMA, this.#metaSchemaId);
   }
 
-  async #loadFromDisk(serviceId) {
+  async #loadBuiltIn(serviceId) {
     if (typeof serviceId !== 'string' || !/^[a-z][a-zA-Z0-9_]*$/.test(serviceId)) {
       throw new SchemaError(
         'SCHEMA_INVALID_SERVICE_ID',
@@ -113,30 +86,16 @@ export class SchemaRegistry {
       );
     }
 
-    const filePath = path.join(this.#schemasDir, `${serviceId}.json`);
-    let raw;
-    try {
-      raw = await readFile(filePath, 'utf-8');
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        throw new SchemaError(
-          'SCHEMA_NOT_FOUND',
-          `Schema not found for service: '${serviceId}'`,
-          serviceId
-        );
-      }
-      throw err;
-    }
-
-    try {
-      return JSON.parse(raw);
-    } catch (err) {
+    const schema = BUILT_IN_SCHEMAS[serviceId];
+    if (!schema) {
       throw new SchemaError(
-        'SCHEMA_INVALID_JSON',
-        `Invalid JSON for service '${serviceId}': ${err.message}`,
+        'SCHEMA_NOT_FOUND',
+        `Schema not found for service: '${serviceId}'`,
         serviceId
       );
     }
+
+    return schema;
   }
 
   #validateMeta(schema, serviceId) {
