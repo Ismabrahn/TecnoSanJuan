@@ -1,6 +1,7 @@
 name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-07-26"
+compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
