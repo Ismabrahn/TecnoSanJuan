@@ -1,0 +1,14 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "invalid_cycle",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Test Invalid Cycle",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "fields": [
+    { "id": "a", "type": "text", "label": "A", "question": "A?", "dependsOn": ["b"] },
+    { "id": "b", "type": "text", "label": "B", "question": "B?", "dependsOn": ["c"] },
+    { "id": "c", "type": "text", "label": "C", "question": "C?", "dependsOn": ["a"] }
+  ],
+  "summaryTemplate": "test",
+  "whatsappTemplate": "test"
+}

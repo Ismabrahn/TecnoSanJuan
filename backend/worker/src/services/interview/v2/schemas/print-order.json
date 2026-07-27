@@ -1,0 +1,101 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "print-order",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Pedido de Impresión 3D",
+  "description": "Pedido personalizado de piezas impresas en 3D",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "tags": ["impresion", "3d", "pieza", "figura", "diseño"],
+  "fieldOrder": ["clientName", "clientPhone", "objectDescription", "material", "colors", "quantity"],
+  "minimumRequired": 2,
+  "allowConcurrent": false,
+  "fields": [
+    {
+      "id": "clientName",
+      "type": "text",
+      "label": "Tu nombre",
+      "question": "¿Cómo te llamás?",
+      "required": true,
+      "placeholder": "Ej: Juan Pérez"
+    },
+    {
+      "id": "clientPhone",
+      "type": "phone",
+      "label": "Tu teléfono",
+      "question": "¿Cuál es tu número de teléfono?",
+      "required": true,
+      "placeholder": "Ej: 2645123456",
+      "validation": { "pattern": "^\\d{7,13}$" },
+      "errorMessage": "Ingresá un número de teléfono válido."
+    },
+    {
+      "id": "objectDescription",
+      "type": "text",
+      "label": "Descripción de la pieza",
+      "question": "¿Qué pieza o diseño necesitás imprimir?",
+      "required": true,
+      "placeholder": "Ej: Soporte para celular, estuche para audífonos, pieza de repuesto"
+    },
+    {
+      "id": "material",
+      "type": "select",
+      "label": "Material",
+      "question": "¿Qué material preferís para tu pieza?",
+      "required": true,
+      "help": "PLA: económico y fácil. ABS: resistente al calor. PETG: para exteriores. Resina: alta definición.",
+      "options": [
+        { "value": "PLA", "label": "PLA (económico)" },
+        { "value": "ABS", "label": "ABS (resistente al calor)" },
+        { "value": "PETG", "label": "PETG (resistente a la intemperie)" },
+        { "value": "resina", "label": "Resina (alta definición)" }
+      ]
+    },
+    {
+      "id": "colors",
+      "type": "multiselect",
+      "label": "Colores",
+      "question": "¿Qué colores querés para tu pieza? Podés elegir varios.",
+      "required": false,
+      "options": [
+        { "value": "blanco", "label": "Blanco" },
+        { "value": "negro", "label": "Negro" },
+        { "value": "rojo", "label": "Rojo" },
+        { "value": "azul", "label": "Azul" },
+        { "value": "verde", "label": "Verde" },
+        { "value": "transparente", "label": "Transparente" }
+      ]
+    },
+    {
+      "id": "quantity",
+      "type": "number",
+      "label": "Cantidad",
+      "question": "¿Cuántas unidades necesitás?",
+      "required": true,
+      "placeholder": "Ej: 1",
+      "unit": "unidades",
+      "validation": {
+        "min": 1,
+        "max": 100
+      },
+      "errorMessage": "La cantidad debe ser entre 1 y 100."
+    }
+  ],
+  "inferences": [
+    {
+      "when": { "eq": { "field": "material", "value": "PLA" } },
+      "then": { "colors": { "value": ["blanco"] } },
+      "priority": 10,
+      "reason": "Por defecto PLA se imprime en blanco",
+      "overridable": true
+    },
+    {
+      "when": { "eq": { "field": "material", "value": "PETG" } },
+      "then": { "colors": { "value": ["transparente"] } },
+      "priority": 10,
+      "reason": "Por defecto PETG es transparente",
+      "overridable": true
+    }
+  ],
+  "summaryTemplate": "¡Gracias {{clientName}} por tu pedido! Resumen:\n\nPieza: {{objectDescription}}\nMaterial: {{material:label}}\nColores: {{colors}}\nCantidad: {{quantity}} {{quantity:unit}}\n\nTe contactaremos al {{clientPhone}} para coordinar la entrega.",
+  "whatsappTemplate": "*NUEVO PEDIDO DE IMPRESIÓN 3D*\n\n*Cliente:* {{clientName}}\n*Teléfono:* {{clientPhone}}\n*Pieza:* {{objectDescription}}\n*Material:* {{material:label}}\n*Colores:* {{colors}}\n*Cantidad:* {{quantity}}\n\nID: {{interviewId}}\n_{{timestamp}}_"
+}

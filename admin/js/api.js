@@ -63,3 +63,23 @@ export function adminUpdate(resource, id, data) {
 export function adminDelete(resource, id) {
   return apiRequest('DELETE', `/api/admin/${resource}/${id}`);
 }
+
+export function updateStatus(resource, id, status) {
+  return apiRequest('PUT', `/api/admin/${resource}/${id}`, { status });
+}
+
+export function getDashboardStats() {
+  return apiRequest('GET', '/api/admin/dashboard');
+}
+
+export function getDlq() {
+  return apiRequest('GET', '/api/admin/events/dlq');
+}
+
+export function replayDlq(dlqId) {
+  return apiRequest('POST', `/api/admin/events/dlq/replay/${dlqId}`);
+}
+
+export function replayAllDlq() {
+  return apiRequest('POST', '/api/admin/events/dlq/replay-all');
+}

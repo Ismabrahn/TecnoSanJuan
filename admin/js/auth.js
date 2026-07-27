@@ -1,5 +1,6 @@
-const SUPABASE_URL = 'https://iqbbdrgajlhkfbvsvzto.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI';
+// Reemplazar con valores reales de Supabase (ver .env.example)
+const SUPABASE_URL = 'https://your-project.supabase.co';
+const SUPABASE_ANON_KEY = 'your-supabase-anon-key';
 
 const SESSION_KEY = 'tecno_admin_session';
 
@@ -81,7 +82,7 @@ async function refreshToken(refreshToken) {
   };
 }
 
-const ADMIN_EMAIL = 'admin@tecnosanjuan.com';
+const ADMIN_EMAIL = 'admin@example.com';
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');

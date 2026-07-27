@@ -5,13 +5,22 @@ import {
   handleAdminCreate,
   handleAdminUpdate,
   handleAdminDelete,
+  handleAdminDashboard,
+  handleAdminGetClientDetail,
+  handleAdminGetNotifications,
+  handleAdminGetEvents,
+  handleAdminGetDlq,
+  handleAdminReplayDlq,
+  handleAdminReplayAllDlq,
 } from './handlers/admin.js';
 import { handleUpdatePassword } from './handlers/admin.js';
-import { handleAdminAiAction } from './handlers/admin-ai.js';
+import { handleAdminAiAction, handleAdminConversations, handleAdminAiSuggestions } from './handlers/admin-ai.js';
+import { handleWebhookGet, handleWebhookPost } from './handlers/whatsapp-webhook.js';
 import { handleChat, handleHealth } from './handlers/chat.js';
 import { requireAdmin } from './middleware/auth.js';
 import { handleOptions, getCorsHeaders } from './middleware/cors.js';
 import { errorResponse, handleError } from './middleware/error.js';
+import { handleInterviewV2 } from './api/interview/v2/routes.js';
 
 const PUBLIC_PREFIX = '/api/public/';
 const ADMIN_PREFIX = '/api/admin/';
@@ -43,6 +52,43 @@ export async function handleRequest(request, env) {
         return errorResponse(request, auth.status, auth.error);
       }
       const response = await handleAdminAiAction(request, env);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/api/admin/conversations' && (request.method === 'GET' || request.method === 'POST')) {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      const response = await handleAdminConversations(request, env);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/api/admin/ai-suggestions' && request.method === 'POST') {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      const response = await handleAdminAiSuggestions(request, env);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/api/admin/whatsapp/metrics' && request.method === 'GET') {
+      const auth = await requireAdmin(request, env);
+      if (!auth.authenticated) {
+        return errorResponse(request, auth.status, auth.error);
+      }
+      const response = await handleAdminAiAction(request, env);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/whatsapp/webhook' && request.method === 'GET') {
+      const response = await handleWebhookGet(request, env);
+      return addCors(response, corsHeaders);
+    }
+
+    if (path === '/whatsapp/webhook' && request.method === 'POST') {
+      const response = await handleWebhookPost(request, env);
       return addCors(response, corsHeaders);
     }
 
@@ -105,6 +151,13 @@ export async function handleRequest(request, env) {
       return addCors(response, corsHeaders);
     }
 
+    const INTERVIEW_PREFIX = '/api/interview/v2/';
+    if (path.startsWith(INTERVIEW_PREFIX)) {
+      const remainder = path.slice(INTERVIEW_PREFIX.length);
+      const response = await handleInterviewV2(request, env, remainder);
+      return addCors(response, corsHeaders);
+    }
+
     if (path.startsWith(ADMIN_PREFIX)) {
       const auth = await requireAdmin(request, env);
       if (!auth.authenticated) {
@@ -116,8 +169,40 @@ export async function handleRequest(request, env) {
       const resource = parts[0];
       const id = parts[1];
 
+      if (path === '/api/admin/dashboard' && request.method === 'GET') {
+        const response = await handleAdminDashboard(request, env, auth);
+        return addCors(response, corsHeaders);
+      }
+
+      if (path === '/api/admin/events/dlq/replay-all' && request.method === 'POST') {
+        const response = await handleAdminReplayAllDlq(request, env);
+        return addCors(response, corsHeaders);
+      }
+
+      if (resource === 'events' && id === 'dlq' && request.method === 'GET') {
+        const response = await handleAdminGetDlq(request, env);
+        return addCors(response, corsHeaders);
+      }
+
+      if (resource === 'events' && parts[2] === 'dlq' && parts[3] === 'replay' && parts[4] && request.method === 'POST') {
+        const response = await handleAdminReplayDlq(request, env, parts[4]);
+        return addCors(response, corsHeaders);
+      }
+
       if (request.method === 'GET' && !id) {
         const response = await handleAdminGetAll(request, env, resource);
+        return addCors(response, corsHeaders);
+      }
+      if (request.method === 'GET' && resource === 'notifications') {
+        const response = await handleAdminGetNotifications(request, env);
+        return addCors(response, corsHeaders);
+      }
+      if (request.method === 'GET' && resource === 'events') {
+        const response = await handleAdminGetEvents(request, env);
+        return addCors(response, corsHeaders);
+      }
+      if (request.method === 'GET' && id && resource === 'clients') {
+        const response = await handleAdminGetClientDetail(request, env, id);
         return addCors(response, corsHeaders);
       }
       if (request.method === 'GET' && id) {
@@ -129,7 +214,7 @@ export async function handleRequest(request, env) {
         return addCors(response, corsHeaders);
       }
       if (request.method === 'PUT' && id) {
-        const response = await handleAdminUpdate(request, env, resource, id);
+        const response = await handleAdminUpdate(request, env, resource, id, auth);
         return addCors(response, corsHeaders);
       }
       if (request.method === 'DELETE' && id) {

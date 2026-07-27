@@ -1,4 +1,26 @@
+const DASHBOARD_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>');
+
+function makeViewModule(id, label, icon, viewPath) {
+  return {
+    id,
+    label,
+    icon,
+    custom: true,
+    render: async (container) => {
+      const mod = await import(viewPath);
+      mod.default(container);
+    },
+  };
+}
+
 export const MODULES = [
+  makeViewModule('dashboard', 'Dashboard', DASHBOARD_ICON, './modules/dashboard/dashboard-view.js'),
+  makeViewModule('clients', 'Clientes', '👤', './modules/clients/clients-view.js'),
+  makeViewModule('notifications', 'Notificaciones', '🔔', './modules/notifications/notifications-view.js'),
+  makeViewModule('events', 'Eventos', '⚡', './modules/events/events-view.js'),
+  makeViewModule('repairs', 'Reparaciones', '🔧', './modules/repairs/repairs-view.js'),
+  makeViewModule('budgets', 'Presupuestos', '📋', './modules/budgets/budgets-view.js'),
+  makeViewModule('print-orders', 'Impresión 3D', '🖨️', './modules/print-orders/print-view.js'),
   {
     id: 'business-info',
     label: 'Información del Negocio',
@@ -192,6 +214,7 @@ export const MODULES = [
       { key: 'image_url', label: 'Imagen', type: 'file' },
     ],
   },
+  makeViewModule('conversations', 'Conversaciones', '💬', './modules/conversations/conversations-view.js'),
   {
     id: 'ai-assistant',
     label: 'Asistente IA',

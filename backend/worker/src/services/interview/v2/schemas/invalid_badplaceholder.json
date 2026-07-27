@@ -1,0 +1,12 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "invalid_badplaceholder",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Test Bad Placeholder",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "fields": [
+    { "id": "nombre", "type": "text", "label": "Nombre", "question": "Nombre?" }
+  ],
+  "summaryTemplate": "Hola {{inexistente}}",
+  "whatsappTemplate": "test"
+}

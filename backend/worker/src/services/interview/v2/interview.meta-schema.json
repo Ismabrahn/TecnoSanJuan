@@ -1,0 +1,585 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "title": "Interview V2 Service Schema",
+  "description": "Meta-schema for Interview V2 service definitions. Validates structure, types, formats, and constraints defined in SCHEMA_SPECIFICATION.md.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "MUST be the exact URI identifying this specification version",
+      "const": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json"
+    },
+    "serviceId": {
+      "description": "Machine-readable identifier. MUST be unique across all service schemas",
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9_]*$",
+      "minLength": 1
+    },
+    "serviceVersion": {
+      "description": "Semver string (MAJOR.MINOR.PATCH)",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "serviceName": {
+      "description": "Human-readable name displayed in summaries and WhatsApp messages",
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "description": "Short explanation of the service and when to offer it",
+      "type": "string"
+    },
+    "updatedAt": {
+      "description": "ISO 8601 timestamp of last modification",
+      "type": "string",
+      "format": "date-time"
+    },
+    "tags": {
+      "description": "Keywords for intent detection. Each tag MUST be non-empty",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "fieldOrder": {
+      "description": "Explicit ordering of field IDs. SchemaRegistry validates that IDs match fields",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-zA-Z0-9_]*$",
+        "minLength": 1
+      }
+    },
+    "minimumRequired": {
+      "description": "Minimum number of fields that MUST be completed. MUST be at least 1",
+      "type": "integer",
+      "minimum": 1
+    },
+    "allowConcurrent": {
+      "description": "Whether a user MAY have multiple active interviews simultaneously. Default: false",
+      "type": "boolean"
+    },
+    "fields": {
+      "description": "Array of field definitions. MUST contain at least one field. SchemaRegistry validates unique IDs",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/field"
+      }
+    },
+    "inferences": {
+      "description": "Inference rules that automatically fill field values",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inference"
+      }
+    },
+    "summaryTemplate": {
+      "description": "Template rendered for the user when the interview completes",
+      "type": "string"
+    },
+    "whatsappTemplate": {
+      "description": "Template rendered for the WhatsApp message sent to the business",
+      "type": "string"
+    }
+  },
+  "required": [
+    "$schema",
+    "serviceId",
+    "serviceVersion",
+    "serviceName",
+    "updatedAt",
+    "fields",
+    "summaryTemplate",
+    "whatsappTemplate"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "field": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique field identifier. MUST NOT be a reserved ID",
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9_]*$",
+          "minLength": 1,
+          "not": {
+            "enum": [
+              "action",
+              "message",
+              "type",
+              "timestamp",
+              "sessionId",
+              "interviewId",
+              "serviceId",
+              "serviceVersion",
+              "completedFields",
+              "history",
+              "pendingFields"
+            ]
+          }
+        },
+        "type": {
+          "description": "Field type determining input method and stored value format",
+          "type": "string",
+          "enum": [
+            "text",
+            "number",
+            "boolean",
+            "select",
+            "multiselect",
+            "phone",
+            "email",
+            "image"
+          ]
+        },
+        "label": {
+          "description": "Short human-readable name used in summaries and templates",
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "description": "Default question to ask the user",
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "description": "Whether the field MUST have a value. Default: true. Propagates to validation.required",
+          "type": "boolean"
+        },
+        "placeholder": {
+          "description": "Example or hint text shown when asking the field",
+          "type": "string"
+        },
+        "help": {
+          "description": "Extended explanation shown when the user needs assistance",
+          "type": "string"
+        },
+        "examples": {
+          "description": "Example values to guide the user",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "errorMessage": {
+          "description": "Custom message shown when validation fails",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/options"
+        },
+        "unit": {
+          "description": "Unit of measurement for display (e.g., gramos, mm, unidades)",
+          "type": "string"
+        },
+        "validation": {
+          "description": "Validation rules for the field value",
+          "$ref": "#/$defs/validation"
+        },
+        "dependsOn": {
+          "description": "Fields or condition that MUST be satisfied before this field can be asked",
+          "$ref": "#/$defs/dependsOn"
+        },
+        "skipIf": {
+          "description": "Condition that, when true, permanently removes this field from the interview",
+          "$ref": "#/$defs/condition"
+        },
+        "default": {
+          "description": "Default value applied when the user provides no answer"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "label",
+        "question"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "$ref": "#/$defs/fieldTypeConstraints"
+        }
+      ]
+    },
+    "fieldTypeConstraints": {
+      "description": "Conditional constraints based on field type: options required for select/multiselect, forbidden for others",
+      "if": {
+        "properties": {
+          "type": {
+            "enum": ["select", "multiselect"]
+          }
+        },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["options"],
+        "properties": {
+          "options": {
+            "minItems": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "options": false
+        }
+      }
+    },
+    "options": {
+      "description": "Array of option objects for select and multiselect field types",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/optionItem"
+      }
+    },
+    "optionItem": {
+      "description": "A single option with a stored value and optional display label",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The stored value. MUST be non-empty. SchemaRegistry validates uniqueness within the array",
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "description": "Human-readable description. If absent, value is used as label",
+          "type": "string"
+        }
+      },
+      "required": ["value"],
+      "additionalProperties": false
+    },
+    "validation": {
+      "description": "Validation rules for a field. All rules are OPTIONAL unless stated otherwise",
+      "type": "object",
+      "properties": {
+        "required": {
+          "description": "If true, the field MUST have a value. Default: same as field-level required",
+          "type": "boolean"
+        },
+        "enum": {
+          "description": "The value MUST be one of the listed strings. Applies to select, multiselect, text",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "min": {
+          "description": "Number value MUST be >= this. Applies to number type",
+          "type": "number"
+        },
+        "max": {
+          "description": "Number value MUST be <= this. Applies to number type",
+          "type": "number"
+        },
+        "minLength": {
+          "description": "String length MUST be >= this. Applies to text, phone, email, image",
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "description": "String length MUST be <= this. Applies to text, phone, email, image",
+          "type": "integer",
+          "minimum": 0
+        },
+        "pattern": {
+          "description": "String value MUST match this regular expression. Applies to text, phone, email",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "description": "A structured JSON expression evaluated against completed field values. One operator per object",
+      "oneOf": [
+        { "$ref": "#/$defs/condition-exists" },
+        { "$ref": "#/$defs/condition-eq" },
+        { "$ref": "#/$defs/condition-neq" },
+        { "$ref": "#/$defs/condition-gt" },
+        { "$ref": "#/$defs/condition-gte" },
+        { "$ref": "#/$defs/condition-lt" },
+        { "$ref": "#/$defs/condition-lte" },
+        { "$ref": "#/$defs/condition-in" },
+        { "$ref": "#/$defs/condition-contains" },
+        { "$ref": "#/$defs/condition-matches" },
+        { "$ref": "#/$defs/condition-not" },
+        { "$ref": "#/$defs/condition-and" },
+        { "$ref": "#/$defs/condition-or" }
+      ]
+    },
+    "condition-exists": {
+      "type": "object",
+      "properties": {
+        "exists": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["field"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["exists"],
+      "additionalProperties": false
+    },
+    "condition-eq": {
+      "type": "object",
+      "properties": {
+        "eq": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": {}
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["eq"],
+      "additionalProperties": false
+    },
+    "condition-neq": {
+      "type": "object",
+      "properties": {
+        "neq": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": {}
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["neq"],
+      "additionalProperties": false
+    },
+    "condition-gt": {
+      "type": "object",
+      "properties": {
+        "gt": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": { "type": "number" }
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["gt"],
+      "additionalProperties": false
+    },
+    "condition-gte": {
+      "type": "object",
+      "properties": {
+        "gte": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": { "type": "number" }
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["gte"],
+      "additionalProperties": false
+    },
+    "condition-lt": {
+      "type": "object",
+      "properties": {
+        "lt": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": { "type": "number" }
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["lt"],
+      "additionalProperties": false
+    },
+    "condition-lte": {
+      "type": "object",
+      "properties": {
+        "lte": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": { "type": "number" }
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["lte"],
+      "additionalProperties": false
+    },
+    "condition-in": {
+      "type": "object",
+      "properties": {
+        "in": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "minLength": 1
+            },
+            "values": {
+              "type": "array",
+              "items": {},
+              "minItems": 1
+            }
+          },
+          "required": ["field", "values"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["in"],
+      "additionalProperties": false
+    },
+    "condition-contains": {
+      "type": "object",
+      "properties": {
+        "contains": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "value": { "type": "string" }
+          },
+          "required": ["field", "value"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["contains"],
+      "additionalProperties": false
+    },
+    "condition-matches": {
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "pattern": { "type": "string" }
+          },
+          "required": ["field", "pattern"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["matches"],
+      "additionalProperties": false
+    },
+    "condition-not": {
+      "type": "object",
+      "properties": {
+        "not": {
+          "$ref": "#/$defs/condition"
+        }
+      },
+      "required": ["not"],
+      "additionalProperties": false
+    },
+    "condition-and": {
+      "type": "object",
+      "properties": {
+        "and": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["and"],
+      "additionalProperties": false
+    },
+    "condition-or": {
+      "type": "object",
+      "properties": {
+        "or": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["or"],
+      "additionalProperties": false
+    },
+    "dependsOn": {
+      "description": "Array of field IDs (shorthand) or a condition object",
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "Shorthand: each field ID MUST exist in fields. Equivalent to AND of exists conditions",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-zA-Z0-9_]*$",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        {
+          "$ref": "#/$defs/condition"
+        }
+      ]
+    },
+    "inference": {
+      "description": "An inference rule that fills field values based on other fields' values",
+      "type": "object",
+      "properties": {
+        "when": {
+          "description": "Condition that triggers this inference",
+          "$ref": "#/$defs/condition"
+        },
+        "then": {
+          "description": "Map of fieldId to { value: T }. SchemaRegistry validates field IDs exist",
+          "$ref": "#/$defs/inferenceThen"
+        },
+        "priority": {
+          "description": "Higher priority wins when multiple inferences target the same field. Default: 0. MAY be negative",
+          "type": "integer"
+        },
+        "reason": {
+          "description": "Human-readable explanation logged for debugging",
+          "type": "string"
+        },
+        "overridable": {
+          "description": "Whether the user MAY change an inferred value. Default: true",
+          "type": "boolean"
+        }
+      },
+      "required": ["when", "then"],
+      "additionalProperties": false
+    },
+    "inferenceThen": {
+      "description": "Object mapping field IDs to their inferred values",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/inferenceThenValue"
+      }
+    },
+    "inferenceThenValue": {
+      "description": "An inferred value for a single field",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The inferred value. Type depends on the target field's type"
+        }
+      },
+      "required": ["value"],
+      "additionalProperties": false
+    }
+  }
+}

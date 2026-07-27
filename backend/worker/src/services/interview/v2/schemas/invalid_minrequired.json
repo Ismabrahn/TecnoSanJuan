@@ -1,0 +1,13 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "invalid_minrequired",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Test Min Required",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "minimumRequired": 10,
+  "fields": [
+    { "id": "a", "type": "text", "label": "A", "question": "A?" }
+  ],
+  "summaryTemplate": "test",
+  "whatsappTemplate": "test"
+}

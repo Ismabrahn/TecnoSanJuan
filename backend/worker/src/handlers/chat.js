@@ -1,7 +1,7 @@
-import { buildContext, buildMessages } from '../services/context.js';
 import { chat } from '../services/openrouter.js';
-import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { query } from '../services/supabase.js';
+import { webSearch, formatSearchResults } from '../services/websearch.js';
+import { buildContext, buildMessages } from '../services/context.js';
 import { errorResponse } from '../middleware/error.js';
 import { createSession, extractName, detectWaitingState, detectWaitingNeedState, detectServiceFromMessage, buildNameResponse, STATES } from '../services/conversation/session.js';
 import { defaultLogger } from '../services/logger.js';
@@ -16,6 +16,15 @@ let RATE_LIMIT_CLEANUP_INTERVAL = null;
 const IN_FLIGHT = new Set();
 const LAST_MESSAGE = new Map();
 const SPAM_WINDOW = 5000;
+let LAST_MESSAGE_CLEANUP = null;
+
+function cleanupLastMessageMap() {
+  const cutoff = Date.now() - SPAM_WINDOW * 10;
+  for (const [ip, entry] of LAST_MESSAGE) {
+    if (entry.time < cutoff) LAST_MESSAGE.delete(ip);
+  }
+  LAST_MESSAGE_CLEANUP = null;
+}
 
 function cleanupRateLimitMap() {
   const cutoff = Date.now() - RATE_LIMIT_WINDOW * 2;
@@ -31,8 +40,7 @@ function cleanupRateLimitMap() {
 
 function checkRateLimit(clientIp) {
   if (!RATE_LIMIT_CLEANUP_INTERVAL) {
-    RATE_LIMIT_CLEANUP_INTERVAL = 1;
-    setTimeout(() => {
+    RATE_LIMIT_CLEANUP_INTERVAL = setTimeout(() => {
       cleanupRateLimitMap();
       RATE_LIMIT_CLEANUP_INTERVAL = null;
     }, RATE_LIMIT_WINDOW);
@@ -55,6 +63,10 @@ function checkRateLimit(clientIp) {
 function detectSpam(clientIp, message) {
   if (IN_FLIGHT.has(clientIp)) {
     return 'Ya tenés una consulta en proceso. Esperá la respuesta.';
+  }
+
+  if (!LAST_MESSAGE_CLEANUP) {
+    LAST_MESSAGE_CLEANUP = setTimeout(cleanupLastMessageMap, SPAM_WINDOW * 10);
   }
 
   const last = LAST_MESSAGE.get(clientIp);
@@ -108,7 +120,6 @@ export async function handleChat(request, env) {
     const userMessage = (body.message || '').trim();
     const chatContext = (body.context || '').trim();
 
-    // Reset action: delete session and restart (before message validation)
     if (body.action === 'reset') {
       const sessionId = body.session || clientIp;
       await deleteSession(env, sessionId);
@@ -137,7 +148,10 @@ export async function handleChat(request, env) {
     IN_FLIGHT.add(clientIp);
 
     try {
+      const runtime = await createChatRuntime(env, chatContext);
       const session = body.session || createSession();
+      const sessionId = session.id || session.session_id || clientIp;
+
       const preprocessed = await processSessionPre(env, session, userMessage);
       if (preprocessed) {
         return new Response(JSON.stringify({
@@ -150,22 +164,18 @@ export async function handleChat(request, env) {
         });
       }
 
-      const [context, webResults] = await Promise.all([
-        buildContext(env, userMessage),
-        webSearch(userMessage).catch(() => []),
-      ]);
+      const result = await runtime.handleMessage({
+        message: userMessage,
+        sessionId,
+      });
 
-      const webContext = formatSearchResults(webResults);
-      const combined = context + (webContext ? '\n\n' + webContext : '');
-      const messages = await buildMessages(env, combined, userMessage, chatContext, session);
-      const response = await chat(env, messages);
-
-      processSessionPost(session, response);
+      if (result.type === 'chat' || result.type === 'conversation') {
+        processSessionPost(session, result.message);
+      }
 
       return new Response(JSON.stringify({
-        response,
+        response: result.message || result.explanation || '',
         session,
-        hasContext: combined.length > 0,
         context: chatContext,
         source: 'ai',
       }), {
@@ -180,6 +190,36 @@ export async function handleChat(request, env) {
   }
 }
 
+async function createChatRuntime(env, chatContext) {
+  const { NexusAIEngine } = await import('../services/nexus/nexus-ai-engine.js');
+  const { PlanningEngine } = await import('../services/nexus/planning-engine.js');
+  const { ChatRuntime } = await import('../services/nexus/chat-runtime.js');
+  const { InterviewRouter } = await import('../services/nexus/interview-router.js');
+  const { SchemaRegistry } = await import('../services/interview/v2/schema-registry.js');
+  const { InterviewController } = await import('../services/interview/v2/interview-controller.js');
+  const { SessionStore } = await import('../services/interview/v2/session-store.js');
+
+  const sessionStore = new SessionStore(env);
+  const schemaRegistry = new SchemaRegistry(env);
+  const interviewController = new InterviewController({ sessionStore, schemaRegistry });
+  const interviewRouter = new InterviewRouter({ schemaRegistry, interviewController });
+
+  const engine = new NexusAIEngine({
+    chatFn: async (prompt) => {
+      const [context, webResults] = await Promise.all([
+        buildContext(env, prompt),
+        webSearch(prompt).catch(() => []),
+      ]);
+      const webContext = formatSearchResults(webResults);
+      const combined = context + (webContext ? '\n\n' + webContext : '');
+      const messages = await buildMessages(env, combined, prompt, chatContext);
+      return chat(env, messages);
+    },
+  });
+
+  return new ChatRuntime({ engine, interviewRouter });
+}
+
 async function processSessionPre(env, session, message) {
   if (session.estado_actual === STATES.WAITING_NAME) {
     const name = extractName(message);
@@ -191,24 +231,14 @@ async function processSessionPre(env, session, message) {
   }
 
   if (session.estado_actual === STATES.WAITING_NEED) {
-    const needResult = await processNeedDetection(env, session, message);
-    if (needResult) return needResult;
-  }
-
-  return null;
-}
-
-async function processNeedDetection(env, session, message) {
-  const service = detectServiceFromMessage(message);
-  if (!service) return null;
-
-  session.estado_actual = STATES.IDENTIFIED;
-
-  if (service === 'servicio_tecnico') {
-    return {
-      response: `Entendido. Para consultas sobre servicio técnico, te recomiendo contactarnos directamente por WhatsApp y uno de nuestros técnicos va a asesorarte. ¿Hay algo más en lo que pueda ayudarte?`,
-      session,
-    };
+    const service = detectServiceFromMessage(message);
+    if (service === 'servicio_tecnico') {
+      session.estado_actual = STATES.IDENTIFIED;
+      return {
+        response: `Entendido. Para consultas sobre servicio técnico, te recomiendo contactarnos directamente por WhatsApp y uno de nuestros técnicos va a asesorarte. ¿Hay algo más en lo que pueda ayudarte?`,
+        session,
+      };
+    }
   }
 
   return null;

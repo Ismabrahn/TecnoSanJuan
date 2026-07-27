@@ -1,34 +1,24 @@
 name = "tecno-san-juan"
 main = "src/index.js"
 compatibility_date = "2025-07-26"
-account_id = "57de15affd59c937759222091bcd23bf"
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
-id = "0614142e73594eb78ec0feb3f427c0f6"
-preview_id = "0614142e73594eb78ec0feb3f427c0f6"
+id = ""
+preview_id = ""
 
 [env.production]
 kv_namespaces = [
-  { binding = "SESSION_KV", id = "0614142e73594eb78ec0feb3f427c0f6" }
+  { binding = "SESSION_KV", id = "" }
 ]
 [env.production.vars]
 ENVIRONMENT = "production"
-SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI"
-OPENROUTER_MODEL = "openai/gpt-4o-mini"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
-SITE_URL = "https://tecnosanjuan.com"
-WHATSAPP_NUMBER = "+543405480010"
+
 [env.development]
 vars = { ENVIRONMENT = "development" }
 
+[triggers]
+crons = ["* * * * *"]
+
 [vars]
-SUPABASE_URL = "https://iqbbdrgajlhkfbvsvzto.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI"
-OPENROUTER_MODEL = "openai/gpt-4o-mini"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-ADMIN_ALLOWED_EMAILS = "admin@tecnosanjuan.com"
-SITE_URL = "https://tecnosanjuan.com"
-WHATSAPP_NUMBER = "+543405480010"
+ENVIRONMENT = "development"

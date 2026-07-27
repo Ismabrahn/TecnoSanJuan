@@ -1,8 +1,36 @@
+# Dependencies
 node_modules/
+
+# Environment
 .env
 .env.local
-.wrangler/
+.env.*
+!.env.example
+.dev.vars
+
+# Build / output
 dist/
+build/
+coverage/
+
+# Cloudflare
+.wrangler/
+
+# Logs
 *.log
+logs/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp
+.tmp/
+temp/
+*.tmp

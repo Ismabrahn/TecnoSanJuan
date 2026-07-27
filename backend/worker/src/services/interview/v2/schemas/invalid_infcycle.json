@@ -1,0 +1,17 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "invalid_infcycle",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Test Inf Cycle",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "fields": [
+    { "id": "a", "type": "text", "label": "A", "question": "A?" },
+    { "id": "b", "type": "text", "label": "B", "question": "B?" }
+  ],
+  "inferences": [
+    { "when": { "exists": { "field": "a" } }, "then": { "b": { "value": "x" } } },
+    { "when": { "exists": { "field": "b" } }, "then": { "a": { "value": "y" } } }
+  ],
+  "summaryTemplate": "test",
+  "whatsappTemplate": "test"
+}

@@ -10,13 +10,19 @@
     "deploy": "wrangler deploy",
     "logs": "wrangler tail",
     "format": "prettier --write .",
-    "test": "node --version"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "jose": "^5.9.6"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "prettier": "^3.4.2",
+    "vitest": "^4.1.10",
     "wrangler": "^4.114.0"
   }
 }

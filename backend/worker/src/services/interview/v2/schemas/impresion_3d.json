@@ -1,0 +1,95 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "impresion_3d",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Impresión 3D",
+  "description": "Cotización de piezas impresas en 3D",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "tags": ["3d", "impresion", "figura", "pieza"],
+  "fieldOrder": ["nombre", "telefono", "material", "color", "cantidad"],
+  "minimumRequired": 3,
+  "allowConcurrent": false,
+  "fields": [
+    {
+      "id": "nombre",
+      "type": "text",
+      "label": "Nombre",
+      "question": "¿Cuál es tu nombre?",
+      "required": true,
+      "placeholder": "Ej: Juan Pérez"
+    },
+    {
+      "id": "telefono",
+      "type": "phone",
+      "label": "Teléfono",
+      "question": "¿Cuál es tu número de teléfono?",
+      "required": true,
+      "help": "Te contactaremos por WhatsApp para confirmar el presupuesto.",
+      "validation": {
+        "required": true,
+        "pattern": "^\\d{10,13}$"
+      },
+      "errorMessage": "Ingresá un número de teléfono válido con al menos 10 dígitos."
+    },
+    {
+      "id": "material",
+      "type": "select",
+      "label": "Material",
+      "question": "¿Qué material querés usar para tu pieza?",
+      "required": true,
+      "help": "PLA: económico y fácil. ABS: resistente al calor. PETG: para exteriores.",
+      "options": [
+        { "value": "PLA", "label": "PLA (económico)" },
+        { "value": "ABS", "label": "ABS (resistente al calor)" },
+        { "value": "PETG", "label": "PETG (resistente a la intemperie)" }
+      ]
+    },
+    {
+      "id": "color",
+      "type": "select",
+      "label": "Color",
+      "question": "¿Qué color preferís para tu pieza?",
+      "required": false,
+      "options": [
+        { "value": "blanco", "label": "Blanco" },
+        { "value": "negro", "label": "Negro" },
+        { "value": "rojo", "label": "Rojo" },
+        { "value": "azul", "label": "Azul" },
+        { "value": "verde", "label": "Verde" }
+      ],
+      "dependsOn": ["material"]
+    },
+    {
+      "id": "cantidad",
+      "type": "number",
+      "label": "Cantidad",
+      "question": "¿Cuántas unidades necesitás?",
+      "required": true,
+      "placeholder": "Ej: 1",
+      "unit": "unidades",
+      "validation": {
+        "min": 1,
+        "max": 100
+      },
+      "errorMessage": "La cantidad debe ser entre 1 y 100."
+    }
+  ],
+  "inferences": [
+    {
+      "when": { "eq": { "field": "material", "value": "PLA" } },
+      "then": { "color": { "value": "blanco" } },
+      "priority": 10,
+      "reason": "Por defecto PLA se imprime en blanco",
+      "overridable": true
+    },
+    {
+      "when": { "eq": { "field": "material", "value": "PETG" } },
+      "then": { "color": { "value": "transparente" } },
+      "priority": 10,
+      "reason": "Por defecto PETG es transparente",
+      "overridable": true
+    }
+  ],
+  "summaryTemplate": "¡Gracias {{nombre}}! Resumen de tu presupuesto:\n\nMaterial: {{material:label}}\nColor: {{color:label}}\nCantidad: {{cantidad}} {{cantidad:unit}}\n\nTe contactaremos al {{telefono}} para confirmar.",
+  "whatsappTemplate": "*NUEVO PRESUPUESTO - {{serviceName}}*\n\n*Cliente:* {{nombre}}\n*Teléfono:* {{telefono}}\n\n*Detalle:*\n{{#each fields}}\n- {{label}}: {{value}}\n{{/each}}\n\nID: {{interviewId}}\n_{{timestamp}}_"
+}

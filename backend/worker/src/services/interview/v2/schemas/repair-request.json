@@ -1,0 +1,61 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "repair-request",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Solicitud de Reparación",
+  "description": "Registro de solicitud para reparación de equipos electrónicos",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "tags": ["reparacion", "arreglo", "tecnicatura", "servicio", "electronica"],
+  "fieldOrder": ["clientName", "clientPhone", "device", "problem", "urgency"],
+  "minimumRequired": 2,
+  "allowConcurrent": false,
+  "fields": [
+    {
+      "id": "clientName",
+      "type": "text",
+      "label": "Tu nombre",
+      "question": "¿Cómo te llamás?",
+      "required": true,
+      "placeholder": "Ej: Juan Pérez"
+    },
+    {
+      "id": "clientPhone",
+      "type": "phone",
+      "label": "Tu teléfono",
+      "question": "¿Cuál es tu número de teléfono?",
+      "required": true,
+      "placeholder": "Ej: 2645123456",
+      "validation": { "pattern": "^\\d{7,13}$" },
+      "errorMessage": "Ingresá un número de teléfono válido."
+    },
+    {
+      "id": "device",
+      "type": "text",
+      "label": "Equipo",
+      "question": "¿Qué equipo necesita reparación?",
+      "required": true,
+      "placeholder": "Ej: Samsung A54, Notebook HP, Tablet Xiaomi"
+    },
+    {
+      "id": "problem",
+      "type": "text",
+      "label": "Problema",
+      "question": "¿Cuál es el problema que presenta?",
+      "required": true,
+      "placeholder": "Ej: no enciende, pantalla rota, batería dura poco"
+    },
+    {
+      "id": "urgency",
+      "type": "select",
+      "label": "Urgencia",
+      "question": "¿Qué tan urgente es la reparación?",
+      "required": false,
+      "options": [
+        { "value": "normal", "label": "Normal — puedo esperar" },
+        { "value": "urgent", "label": "Urgente — lo necesito pronto" }
+      ]
+    }
+  ],
+  "summaryTemplate": "¡Gracias {{clientName}}! Registramos tu solicitud de reparación:\n\nEquipo: {{device}}\nProblema: {{problem}}\nUrgencia: {{urgency:label}}\n\nTe contactaremos al {{clientPhone}} para coordinar el servicio.",
+  "whatsappTemplate": "*NUEVA SOLICITUD DE REPARACIÓN*\n\n*Cliente:* {{clientName}}\n*Teléfono:* {{clientPhone}}\n*Equipo:* {{device}}\n*Problema:* {{problem}}\n*Urgencia:* {{urgency:label}}\n\nID: {{interviewId}}\n_{{timestamp}}_"
+}

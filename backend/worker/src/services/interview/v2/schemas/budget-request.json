@@ -1,0 +1,67 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "budget-request",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Solicitud de Presupuesto",
+  "description": "Solicitud de presupuesto para servicios técnicos",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "tags": ["presupuesto", "precio", "cotizacion", "costo", "valor"],
+  "fieldOrder": ["clientName", "clientPhone", "serviceType", "description", "contact"],
+  "minimumRequired": 2,
+  "allowConcurrent": false,
+  "fields": [
+    {
+      "id": "clientName",
+      "type": "text",
+      "label": "Tu nombre",
+      "question": "¿Cómo te llamás?",
+      "required": true,
+      "placeholder": "Ej: Juan Pérez"
+    },
+    {
+      "id": "clientPhone",
+      "type": "phone",
+      "label": "Tu teléfono",
+      "question": "¿Cuál es tu número de teléfono?",
+      "required": true,
+      "placeholder": "Ej: 2645123456",
+      "validation": { "pattern": "^\\d{7,13}$" },
+      "errorMessage": "Ingresá un número de teléfono válido."
+    },
+    {
+      "id": "serviceType",
+      "type": "select",
+      "label": "Tipo de servicio",
+      "question": "¿Qué tipo de servicio necesitás?",
+      "required": true,
+      "options": [
+        { "value": "reparacion", "label": "Reparación de equipo" },
+        { "value": "accesorio", "label": "Compra de accesorio" },
+        { "value": "impresion_3d", "label": "Impresión 3D" },
+        { "value": "otro", "label": "Otro" }
+      ]
+    },
+    {
+      "id": "description",
+      "type": "text",
+      "label": "Descripción",
+      "question": "Contanos brevemente qué necesitás para poder darte un presupuesto",
+      "required": true,
+      "placeholder": "Ej: Cambio de pantalla para Samsung A54"
+    },
+    {
+      "id": "contact",
+      "type": "phone",
+      "label": "Teléfono de contacto",
+      "question": "Dejanos tu número de teléfono para contactarte",
+      "required": false,
+      "placeholder": "Ej: 2645123456",
+      "validation": {
+        "pattern": "^\\d{7,13}$"
+      },
+      "errorMessage": "Ingresá un número de teléfono válido."
+    }
+  ],
+  "summaryTemplate": "¡Gracias {{clientName}}! Recibimos tu solicitud de presupuesto:\n\nServicio: {{serviceType:label}}\nDescripción: {{description}}\nTeléfono: {{clientPhone}}\n\nTe contactaremos pronto.",
+  "whatsappTemplate": "*NUEVA SOLICITUD DE PRESUPUESTO*\n\n*Cliente:* {{clientName}}\n*Teléfono:* {{clientPhone}}\n*Servicio:* {{serviceType:label}}\n*Descripción:* {{description}}\n*Contacto:* {{contact}}\n\nID: {{interviewId}}\n_{{timestamp}}_"
+}

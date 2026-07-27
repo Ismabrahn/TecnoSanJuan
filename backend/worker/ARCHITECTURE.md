@@ -1,402 +1,371 @@
-# Arquitectura de Nexus — Interview Platform v2
+# Arquitectura de Nexus — Interview Platform v2 + Nexus AI
 
 ## Principios Fundamentales
 
-1. **La IA NO controla el flujo.** Solo interpreta respuestas y extrae entidades.
-2. **Toda pregunta se lee del JSON de configuración.** Engine decide cuándo mostrar cada pregunta.
-3. **Todo el texto visible viene del JSON.** `welcome.title`, `welcome.message`, `completionTemplate`.
-4. **El resumen se construye con templates.** `summaryTemplate` con placeholders `{{nombre}}`, `{{fields}}`.
-5. **Agregar un servicio = crear un archivo JSON.** Nunca tocar el Engine.
-6. **Validación startup.** Todos los JSON se validan al cargar el Worker. Si hay errores, no arranca.
+1. **La IA NO controla el flujo.** Solo interpreta respuestas y decide qué herramientas ejecutar.
+2. **Separación de responsabilidades.** Cada módulo tiene una función única y bien definida.
+3. **Sin dependencias circulares.** El grafo de imports es estrictamente acíclico.
+4. **Los tool calls son el mecanismo de acción.** Toda interacción con el mundo exterior pasa por herramientas registradas.
+5. **Validación startup.** Todos los JSON de configuración se validan al cargar el Worker.
 
 ---
 
-## Módulos
+## Arquitectura General
 
 ```
-src/services/
-  logger.js                        ← Logger centralizado
-  interview/
-    engine.js                      ← Interview Engine (estado, progreso, skip, dependsOn, history)
-    handler.js                     ← Orchestrator (coordina Engine + Interpreter + Resolver + Summary)
-    interpreter.js                 ← AI Interpreter (única llamada a OpenRouter)
-    resolver.js                    ← Entity Resolver (valida contra schema + validation rules)
-    validation.js                  ← Validation Engine (reglas declarativas: regex, min, max, etc.)
-    summary.js                     ← Summary Builder (templates con {{placeholder}})
-    catalog-validator.js           ← Catalog Validator (valida JSONs al startup)
-    event-bus.js                   ← Event Bus interno
-    definitions.js                 ← Factory de Engine por servicio
-    services/
-      index.js                     ← Plugin loader + validación startup
-      impresion_3d.json            ← Config de Impresión 3D
-      carteleria_led.json          ← Config de Cartelería LED
+HTTP Request → Router → Handler (chat/admin/API)
+                           │
+                    ┌──────┴──────┐
+                    │ ChatRuntime │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+         NexusAIEngine  Interview   ProfileManager
+              │         Router        │
+              │            │          │
+         ┌────┴────┐       │          │
+         │         │       │          │
+    ToolRegistry  PlanningEngine      │
+         │                           │
+    ToolExecutor                      │
+         │                           │
+    ┌────┴────┐                      │
+    │ Tools   │                ┌─────┴─────┐
+    │ (conv,  │                │ Profile   │
+    │  admin, │                │ Permissions│
+    │  interview)              └───────────┘
 ```
 
-### `src/services/interview/services/` — Service Configuration (Plugin System)
+---
 
-Cada servicio es un archivo JSON. El plugin loader (`services/index.js`) los carga y valida al startup.
+## Nexus — Core
 
-**Estructura del JSON:**
+### `chat-runtime.js` — Orquestador Principal
 
-```json
+Coordina el flujo completo de un mensaje entrante:
+
+1. Detecta si hay una entrevista activa → delega a `InterviewRouter`
+2. Sino, envía a `NexusAIEngine.process()` con el contexto actual
+3. Si el engine ejecuta herramientas de entrevista → `InterviewRouter` procesa
+4. Formatea la respuesta final según el resultado
+
+**Flujo:**
+```
+handleMessage(message, context)
+  → interviewRouter.hasActiveInterview()?
+    → Sí: interviewRouter.processMessage() → return
+    → No: engine.process(context)
+      → engine retorna { response, toolResults, ... }
+      → Si ejecutó interview tools → interviewRouter finaliza
+      → Si completedInterview → marca como completo
+      → #formatResponse() → mensaje final
+```
+
+### `nexus-ai-engine.js` — Motor de IA
+
+Procesa mensajes a través de un modelo de lenguaje (OpenAI/OpenRouter):
+
+- Construye el system prompt con herramientas disponibles, perfil y contexto
+- Envía el historial de mensajes al modelo
+- Procesa tool calls del modelo (ejecuta herramientas)
+- Retorna respuesta + resultados de herramientas ejecutadas
+- **Nunca tiene estado propio** — todo el estado viene en `context`
+
+### `tool-registry.js` — Registro de Herramientas
+
+- Almacena herramientas como objetos `{ name, description, parameters, execute }`
+- Valida schemas de herramientas al registrarlas
+- Provee lista de herramientas para el prompt del modelo
+- `get(name)` → herramienta individual
+
+### `tool-executor.js` — Ejecutor de Herramientas
+
+Ejecuta herramientas por nombre con trazabilidad:
+
+- Recibe un array `{ name, arguments }` de tool calls
+- Busca cada herramienta en el registry
+- Ejecuta con validación de entrada
+- Trackea ejecuciones (`byTool[toolName].executed++`)
+- Retorna resultados en formato estándar `{ name, result, error? }`
+
+### `planning-engine.js` — Planificador
+
+Dado un mensaje y contexto, determina qué acción tomar:
+
+- Analiza intento del mensaje
+- Decide entre: responder, crear presupuesto, buscar información, derivar a admin
+- Retorna un plan estructurado con acción y datos asociados
+- **No ejecuta acciones** — solo planifica
+
+### `context-manager.js` — Gestor de Contexto
+
+Mantiene y provee el contexto de conversación:
+
+- Almacena sesiones por `conversationId`
+- Cada sesión contiene: historial de mensajes, datos del cliente, estado de entrevista, metadatos
+- `updatedAt` con timestamps monotónicos para evitar colisiones
+- `getSession(conversationId, clientData)` → crea o recupera
+
+### `profile-manager.js` — Perfiles y Permisos
+
+Gestiona perfiles de cliente/admin con sus herramientas permitidas:
+
+- Perfiles predefinidos: `customer`, `admin`, `superadmin`
+- Cada perfil define `allowedTools[]` y configuraciones
+- `getProfile(profileName)` → perfil con sus tools permitidas
+- `validateToolAccess(profile, toolName)` → verifica permiso
+
+### `conversation-manager.js` — Gestor de Conversaciones
+
+Administra sesiones de conversación activas:
+
+- CRUD de conversaciones (`create`, `get`, `list`, `delete`)
+- Filtros: por status, admin asignado, channel, cliente, texto, no leídos
+- `getInactiveClients(daysThreshold)` → clientes inactivos
+- `searchMessages(query)` → búsqueda en historial
+- `getPendingReplies()` → conversaciones que requieren respuesta
+
+### `conversation-memory.js` — Memoria de Conversación
+
+Almacenamiento clave-valor por conversación con TTL:
+
+- `remember(id, key, value, ttlMs)` → guarda con expiración opcional
+- `recall(id, key)` → recupera respetando TTL
+- Prune automático cada 60s (o al escribir/leer si pasó el intervalo)
+- Límite de 10k entradas totales con evicción de expiradas
+- Memoria separada: datos (`#memory`) + resúmenes (`#summaries`)
+
+### `conversation-session.js` — Sesión de Conversación
+
+Modelo de datos para una conversación individual:
+
+- `conversationId`, `clientId`, `clientName`, `phone`, `channel`
+- `status`, `assignedAdmin`, `unreadCount`
+- `lastInteraction`, `history[]` (mensajes)
+- `metadata` (datos adicionales como `serviceType`, `budgetId`)
+
+### `observability.js` — Observabilidad
+
+Métricas y tracing para el sistema:
+
+- Trackea: latencia de engine, herramientas ejecutadas, errores, mensajes procesados
+- Exporta métricas en formato estructurado
+- `recordMetric(name, value, tags?)`
+
+---
+
+## Interview v2 — Subsystem
+
+El subsistema de entrevistas está documentado en detalle en:
+- [`SCHEMA_SPECIFICATION.md`](src/services/interview/v2/SCHEMA_SPECIFICATION.md) — Especificación completa del schema de servicios
+- Código en `src/services/interview/v2/`
+
+**Componentes clave:**
+
+| Módulo | Responsabilidad |
+|--------|----------------|
+| `interview-router.js` | Puente entre Nexus e Interview v2. Decide si el mensaje necesita entrevista |
+| `interview-controller.js` | Orquesta el pipeline de entrevista (pregunta → interpreta → resuelve → avanza) |
+| `question-generator.js` | Genera la pregunta a mostrar según el campo pendiente |
+| `interpreter.js` | Único módulo que llama a OpenRouter. Extrae entidades del mensaje |
+| `resolver.js` | Valida entidades contra schema + reglas de validación |
+| `session-store.js` | Persistencia de sesiones en Supabase |
+
+**Pipeline de entrevista:**
+```
+1. ¿Nuevo? → pregunta inicial (welcome + primera pregunta)
+2. Interpretar → AI extrae entidades del mensaje
+3. Resolver → validar contra schema
+4. Avanzar → engine.getNextQuestion()
+5. ¿Completo? → generar resumen + template WhatsApp
+```
+
+---
+
+## Handlers
+
+### `chat.js` — Handler de Chat (WhatsApp)
+
+Punto de entrada para mensajes de WhatsApp:
+
+- **Rate limiting** por IP: `RATE_LIMIT_MAP` con cleanup periódico cada 60s
+- **Spam detection**: `IN_FLIGHT` Set, `LAST_MESSAGE` Map con cleanup lazy
+- **Validación de webhook**: firma, token, método
+- **Pipeline**: valida → detecta servicio → crea/recupera sesión → `ChatRuntime.handleMessage()` → respuesta
+- **Estados de sesión**: `new`, `active`, `interview_active`, `completed`
+- **Límites**: max 10 sesiones activas por cliente, timeout de 30 min
+
+### `admin.js` — Handler de Admin
+
+Panel de administración para gestionar conversaciones:
+
+- Autenticación con JWT
+- CRUD de conversaciones, asignación de admin, envío de mensajes
+- Ver historial, buscar, filtrar
+- Estadísticas: activas, pendientes, no leídas
+- Tools: `admin:list`, `admin:assign`, `admin:reply`, etc.
+
+---
+
+## Tools (`src/services/nexus/tools/`)
+
+| Tool | Propósito |
+|------|-----------|
+| `conversation-tools` | Buscar, crear, actualizar conversaciones |
+| `admin-tools` | Asignar admin, enviar respuestas, obtener estadísticas |
+| `interview-tools` | Iniciar, avanzar, completar entrevistas |
+
+Estructura de una tool:
+```js
 {
-  "id": "carteleria_led",
-  "name": "Cartelería LED",
-  "schemaVersion": 1,
-  "serviceVersion": "1.0.0",
-  "updatedAt": "2026-07-24T00:00:00Z",
-
-  "welcome": {
-    "title": "Hola.",
-    "message": "Voy a hacerte algunas preguntas para preparar tu presupuesto."
-  },
-
-  "completionTemplate": "¡Perfecto {{nombre}}! ...\n\n{{summary}}\n\nAdjuntá ...",
-  "summaryTemplate": "Hola.\n\nSolicito ...\n\n{{fields}}\n\nGracias.",
-  "keywords": ["cartel", "led", ...],
-  "catalog": { "forbidden": ["animación", ...] },
-
-  "questions": [
-    { "id": "nombre", "label": "Nombre", "question": "¿Cuál es tu nombre?",
-      "type": "text", "required": true,
-      "validation": { "minLength": 3, "maxLength": 100 } },
-    { "id": "requiere_diseno", "label": "Diseño",
-      "skipIf": { "field": "archivo", "value": true } },
-    { "id": "controlador", "label": "Controlador",
-      "dependsOn": { "field": "tipo_iluminacion", "equals": "RGB" } }
-  ]
+  name: 'tool:name',
+  description: 'Descripción para el prompt del modelo',
+  parameters: { /* JSON Schema */ },
+  execute: async (args, context) => { /* lógica */ },
 }
 ```
 
-**Validación startup** (catalog-validator.js):
-- IDs duplicados
-- `dependsOn.field` refiere a un ID existente
-- `skipIf.field` refiere a un ID existente
-- `summaryTemplate` placeholders refieren a IDs válidos o placeholders reservados
-- `welcome.title`, `welcome.message` requeridos
-- `schemaVersion`, `serviceVersion` requeridos
-- Opciones duplicadas en `select`
-
-### `src/services/interview/engine.js` — Interview Engine
-
-Controla el estado de la entrevista. **Nunca llama a OpenRouter.**
-
-```js
-createState(session?)    // Inicializa estado con versiones, history[]
-getNextQuestion(state)   // Retorna la siguiente pregunta o null
-getPendingFields(state)  // Pendientes no saltados
-getStatus(state)         // { complete, total, completed, pending, pendingFields[] }
-getProgress(state)       // { completed, skipped, pending, total, percent }
-isComplete(state)        // Marca saltables como '---', retorna boolean
-shouldSkip(state, q)     // Evalúa skipIf
-dependsOnSatisfied(state, q) // Evalúa dependsOn (equals, in)
-addHistory(state, field, newVal) // Registra cambio en history[]
-getHistory(state)        // Retorna history[]
-checkVersionCompatibility(state) // Compara schemaVersion
-```
-
-**Flujo de getNextQuestion():**
-```
-Itera questions[]
-  → Sin .question (inferido): continua
-  → Ya tiene valor: continua
-  → dependsOn NO satisfecho: marca '---', continua
-  → shouldSkip: marca '---', continua
-  → Retorna pregunta
-  → Ninguna: retorna null (completa)
-```
-
-**getProgress()** devuelve:
-```json
-{ "completed": 5, "skipped": 1, "pending": 4, "total": 10, "percent": 60 }
-```
-
-**Versionado:** `state.schemaVersion` se compara con el schema actual. Si cambió, se emite warning.
-
-### `src/services/interview/validation.js` — Validation Engine
-
-Valida declarativamente los valores de campos contra reglas definidas en el JSON.
-
-**Reglas soportadas:**
-
-| Regla | Descripción |
-|-------|-------------|
-| `minLength` | Longitud mínima de string |
-| `maxLength` | Longitud máxima de string |
-| `regex` | Expresión regular |
-| `min` | Valor numérico mínimo |
-| `max` | Valor numérico máximo |
-
-**No depende del modelo IA.** Las validaciones se aplican en el Resolver después de la extracción de entidades.
-
-### `src/services/interview/interpreter.js` — AI Interpreter
-
-Único módulo que llama a OpenRouter. **Extrae entidades exclusivamente.**
-
-**Contrato de entrada:** estado actual + mensaje del usuario + campos pendientes.
-
-**Contrato de salida (JSON estricto):**
-```json
-{
-  "entities": [
-    { "field": "texto", "value": "MUSCULACIÓN", "confidence": 0.99 }
-  ],
-  "intent": "valid_answer" | "partial" | "question" | "ambiguous" | "off_topic"
-}
-```
-
-Restricciones:
-- No genera preguntas, sugerencias, ni texto libre.
-- No devuelve `confirmacion`.
-- Para `select`: solo valores exactos de `options[]`.
-
-### `src/services/interview/resolver.js` — Entity Resolver
-
-Valida entidades del Interpreter contra:
-1. Schema: el campo existe en `questions[]`
-2. Estado: el campo no está completo
-3. Select: el valor está en `options[]`
-4. Forbidden: el valor no contiene palabras prohibidas
-5. Validation: el valor pasa las reglas de `validation` (minLength, regex, etc.)
-
-**Salida:**
-```js
-{ resolved: [{ field, value, confidence }], rejected: [{ field, value, reason }] }
-```
-
-**Motivos de rechazo:** `not_in_schema`, `invalid_option`, `prohibited_word`, `validation_error`, `already_populated`.
-
-### `src/services/interview/summary.js` — Summary Builder
-
-Construye textos 100% a partir de templates. **Nunca usa IA.**
-
-**Placeholders disponibles:**
-- `{{nombre}}` → `state.nombre`
-- `{{name}}` → `schema.name`
-- `{{fields}}` → lista formateada de campos completados (`- Label: valor`)
-- `{{summary}}` → resultado de `buildSummary()` (para `completionTemplate`)
-- `{{id_del_campo}}` → cualquier campo del state
-
-**Funciones:**
-| Función | Propósito |
-|---------|-----------|
-| `buildSummary(schema, state)` | Resumen para WhatsApp desde `summaryTemplate` |
-| `buildCompletionMessage(schema, state, summary)` | Mensaje de finalización desde `completionTemplate` |
-| `buildStructuredSummary(schema, state)` | Array `[campo: valor]` para uso interno |
-
-### `src/services/interview/catalog-validator.js` — Catalog Validator
-
-Se ejecuta al importar los servicios. Valida todos los JSON y lanza error si hay problemas.
-
-**Verifica:**
-- Campos requeridos (`id`, `name`, `welcome`, `summaryTemplate`, etc.)
-- IDs duplicados en questions
-- `dependsOn.field` y `skipIf.field` existen
-- Placeholders en templates refieren a IDs válidos
-- Opciones duplicadas en select
-- `schemaVersion`, `serviceVersion` presentes
-
-### `src/services/interview/handler.js` — Orchestrator
-
-Coordina Engine + Interpreter + Resolver + Summary. **No contiene lógica de negocio.**
-
-**Pipeline:**
-```
-1. ¿Nueva entrevista?
-   → engine.createState()
-   → render welcome.title + welcome.message + primera pregunta
-   → return
-
-2. Detectar servicio (keywords) → detectService()
-
-3. AI interpret → interpreter.interpret()
-
-4. Resolver entidades → resolver.resolveEntities()
-
-5. Aplicar al estado con history
-
-6. ¿Nombre falta? → retornar pregunta nombre
-
-7. engine.getNextQuestion()
-   → ¿Complete? → buildSummary() + buildCompletionMessage() → return
-   → ¿Hay pregunta? → return
-```
-
-**NO contiene llamadas a OpenRouter.** (excepto interpreter.interpret() que es la única).
-
-### `src/services/interview/event-bus.js` — Event Bus
-
-Sistema de eventos interno, desacoplado.
-
-**Eventos:**
-```
-InterviewStarted    → interview:started
-QuestionAnswered    → question:answered
-FieldUpdated        → field:updated
-QuestionSkipped     → question:skipped
-InterviewCompleted  → interview:completed
-SummaryGenerated    → summary:generated
-WhatsAppRendered    → whatsapp:rendered
-WhatsAppOpened      → whatsapp:opened
-AnalyticsUpdated    → analytics:updated
-```
-
-**Uso:**
-```js
-import { eventBus, Events } from './event-bus.js';
-eventBus.on(Events.InterviewCompleted, (data) => { /* track */ });
-eventBus.emit(Events.InterviewCompleted, { type, state, summary });
-```
-
-### `src/services/logger.js` — Centralized Logger
-
-**Formato:** `[MODULE] [LEVEL] [session:id] [service:id] [q:field] [latency] message`
-
-**Uso:**
-```js
-import { defaultLogger } from '../logger.js';
-const log = defaultLogger.withSession(sessionId, serviceId);
-log.info('[ENGINE]', 'Mensaje', { questionId: 'nombre', latency: 150 });
-```
-
-**Módulos:** `[ENGINE]`, `[HANDLER]`, `[INTERPRETER]`, `[RESOLVER]`, `[VALIDATION]`, `[SUMMARY]`, `[CHAT]`, `[WHATSAPP]`, `[CATALOG]`.
-
-### `js/whatsapp.js` — WhatsApp Service (Frontend)
-
-Módulo independiente para el botón de WhatsApp. Emite eventos `CustomEvent` en `document`.
-
-**Eventos frontend:**
-- `whatsapp:rendered` → botón renderizado
-- `whatsapp:click` → click en botón
-- `whatsapp:opened` → WhatsApp abierto exitosamente
-- `whatsapp:blocked` → popup bloqueado
-- `whatsapp:error` → error
-
 ---
 
-## Ciclo de Vida
+## Flujo Completo (WhatsApp → Respuesta)
 
 ```
-IDLE → WAITING_NAME → WAITING_NEED → IDENTIFIED → presupuesto_completo
-```
-
-1. **IDLE**: Usuario escribe. Sesión sin estado de entrevista.
-2. **WAITING_NAME**: Se pregunta el nombre.
-3. **WAITING_NEED**: Se pregunta qué servicio necesita.
-4. **IDENTIFIED**: Servicio detectado → comienza entrevista guiada por handler.
-5. **presupuesto_completo**: Todos los campos obligatorios respondidos.
-   - `engine.getProgress().percent === 100`
-   - Summary Builder genera resumen
-   - WhatsApp button en frontend
-   - Input deshabilitado
-
----
-
-## Flujo Completo
-
-```
-Usuario envía mensaje
-  → chat.js: ¿context=3d_quote o interview state?
-    → handler.handleInterview()
-      → ¿Nuevo? → welcome.title + welcome.message + primera pregunta
-      → detectService() por keywords
-      → interpret() → OpenRouter extrae entidades
-      → resolveEntities() → valida contra schema + validation rules
-      → engine.addHistory() + engine.getNextQuestion()
-        → ¿Complete? → buildSummary() + buildCompletionMessage() → return
-        → ¿Hay pregunta? → return
-  → chat.js: agrega phone, summary, progress, structuredSummary
-    → Frontend: ¿complete?
-      → whatsapp.js → botón con eventos
-      → Progress bar 100%
-      → Input deshabilitado
+Usuario envía mensaje WhatsApp
+  → Webhook recibe → POST /webhook/whatsapp
+    → whatsapp-service.ts verifica firma
+    → chat.js: handleWebhook()
+      → Rate limit check
+      → Spam detection
+      → Obtener/crear sesión
+      → ChatRuntime.handleMessage()
+        → ¿Interview activa?
+          → Sí: interviewRouter.processMessage()
+          → No: NexusAIEngine.process()
+            → Build prompt with tools + profile + context
+            → LLM response (tool calls or text)
+            → ToolExecutor ejecuta tools
+            → ¿Interview tools ejecutadas?
+              → interviewRouter finaliza
+            → Format response
+      → Guardar en historial
+      → Enviar respuesta WhatsApp
 ```
 
 ---
 
-## Agregar un Nuevo Servicio
+## Flujo de Admin (Panel → Respuesta)
 
-1. Crear `src/services/interview/services/mi_servicio.json`
-2. Incluir: `id`, `name`, `description`, `schemaVersion`, `serviceVersion`, `updatedAt`
-3. Incluir: `welcome.title`, `welcome.message`
-4. Incluir: `summaryTemplate`, `completionTemplate` (usar `{{placeholder}}`)
-5. Incluir: `keywords[]`, `questions[]`
-6. Opcional: `catalog.forbidden[]`, `validation` por campo, `skipIf`, `dependsOn`
-7. Agregar al import en `services/index.js`:
-
-```js
-import mi_servicio from './mi_servicio.json' assert { type: 'json' };
-const SERVICES = [impresion_3d, carteleria_led, mi_servicio];
 ```
-
-**No modificar:**
-- `engine.js`
-- `handler.js`
-- `interpreter.js`
-- `resolver.js`
-- `summary.js`
-- `validation.js`
-- `catalog-validator.js`
+Admin envía mensaje desde panel
+  → admin.js: handleAdminMessage()
+    → Verificar JWT
+    → Verificar permisos (profile-manager)
+    → AdminAssistant.process()
+      → Contexto de la conversación
+      → Tools disponibles para admin
+      → Respuesta formateada
+    → Guardar en historial
+    → Notificar al cliente vía WhatsApp
+```
 
 ---
 
 ## Tests
 
 ```bash
-npm test
+npm test                 # Todos los tests
+npx vitest run           # Tests en CI
+npx vitest --watch       # Modo desarrollo
 ```
 
-**65+ tests** cubren:
-- Engine: createState, getProgress, getStatus, isComplete, skipIf, dependsOn, history, versioning
-- Validation: minLength, maxLength
-- Catalog: IDs duplicados, dependsOn inválido, welcome faltante, opciones duplicadas
-- Summary: templates con placeholders, completionMessage
-- Resolver: schema validation, select options, forbidden words, validation errors
-- resolveBoolean
+**1369 tests** en 71 archivos, cubriendo:
+- **Nexus Core**: NexusAIEngine, ChatRuntime, ToolRegistry, ToolExecutor, PlanningEngine, ContextManager
+- **Perfiles**: ProfileManager, permisos, acceso a tools
+- **Entrevistas**: InterviewRouter, v2 pipeline, schema, validación, interpretación
+- **Conversaciones**: ConversationManager, ConversationSession, ConversationMemory, búsqueda
+- **WhatsApp**: Webhook, mensajes, meta-channel, contacto, media
+- **Admin**: Handler, admin-assistant, tools de admin
+- **Eventos**: EventBus, EventQueue, EventPipeline, EventWorker, DLQ
+- **Notificaciones**: Service, templates, channels
+- **Business**: ClientService, RepairService, BudgetService, PrintService
+- **Migración legacy**: 0 legacy dependencies, tests actualizados
+
+---
+
+## Performance Benchmarks
+
+| Operación | Tiempo |
+|-----------|--------|
+| Engine startup (NexusAIEngine) | 0.013ms |
+| ToolRegistry.get | 0.0001ms |
+| ToolExecute (sync) | 0.004ms |
+| PlanningEngine.createPlan | 0.012ms |
+| ContextManager.getSession | 0.00004ms |
+| ConversationManager.list (100) | 0.25ms |
+| MessageParser.parse | 0.003ms |
+| Interview v2 full pipeline | ~150ms |
+| WhatsApp webhook (sin IA) | ~5ms |
+
+---
+
+## Memory Management
+
+| Component | Estrategia |
+|-----------|-----------|
+| ConversationMemory | TTL con prune automático cada 60s, max 10k entries |
+| Chat IN_FLIGHT | Set, limpiado al finalizar cada request |
+| Chat LAST_MESSAGE | Cleanup lazy cada 50s (10× SPAM_WINDOW) |
+| Chat RATE_LIMIT_MAP | Cleanup periódico cada 60s |
+| ConversationManager | Sesiones sin límite duro (efímeras en Worker) |
+| Event listeners | Pattern: `on()`/`off()` con cleanup explícito |
+| Timers | Todos referenciados para posible cancelación |
+
+---
+
+## Agregar una Nueva Tool
+
+1. Crear archivo en `src/services/nexus/tools/mi-tool.js`
+2. Exportar objeto con `{ name, description, parameters, execute }`
+3. Importar y registrar en `tools/index.js`
+4. Agregar al perfil correspondiente en `profile-manager.js` (`allowedTools[]`)
+5. Escribir tests en `tools/mi-tool.test.js`
+
+**No modificar:**
+- `nexus-ai-engine.js` (no necesita saber de tools individuales)
+- `chat-runtime.js` (no cambia la orquestación)
+- `tool-executor.js` (ejecuta cualquier tool registrada)
 
 ---
 
 ## Depuración
 
-### Logs
+### Módulos y prefijos de log
 
-| Prefijo | Módulo | Eventos clave |
-|---------|--------|---------------|
-| `[ENGINE]` | engine.js | NEXT_QUESTION, COMPLETE, skipIf, dependsOn |
-| `[HANDLER]` | handler.js | ENTITY_SAVED, REJECTED, status |
-| `[INTERPRETER]` | interpreter.js | Llamadas a OpenRouter |
-| `[RESOLVER]` | resolver.js | REJECTED, BLOCKED, validation |
-| `[VALIDATION]` | validation.js | Errores de reglas |
-| `[SUMMARY]` | summary.js | GENERATED |
-| `[CHAT]` | chat.js | Rate limit, session, phone |
-| `[WHATSAPP]` | whatsapp.js | Botón, URL, popup |
-| `[CATALOG]` | catalog-validator.js | Errores startup |
+| Prefijo | Módulo |
+|---------|--------|
+| `[NEXUS]` | NexusAIEngine |
+| `[CHAT]` | ChatRuntime / chat.js |
+| `[TOOL]` | ToolExecutor |
+| `[PLAN]` | PlanningEngine |
+| `[CTX]` | ContextManager |
+| `[ADMIN]` | admin.js / AdminAssistant |
+| `[INTERVIEW]` | Interview v2 pipeline |
 
 ### Problemas comunes
 
-**Error al deploy: "Error de validación en servicios"**
-→ Verificar JSON: IDs duplicados, welcome faltante, dependsOn roto.
+**El modelo no ejecuta herramientas:**
+→ Verificar que las tools están en el prompt (tool-registry + profile)
+→ Verificar que `allowedTools[]` en el perfil incluye las tools
 
-**El botón de WhatsApp no aparece:**
-1. `[CHAT]` debe mostrar "Entrevista completada"
-2. `[WHATSAPP]` debe mostrar "VALIDATED" o "ERROR"
-3. `WHATSAPP_NUMBER` en `wrangler.toml`
-4. `summary` no debe ser null
+**La entrevista no se inicia:**
+→ `interview-router.hasActiveInterview()` no detecta estado
+→ Verificar que `context.interviewState` se propaga correctamente
 
-**La entrevista no avanza:**
-1. `[HANDLER]` Estado: verificar `completados/total`
-2. `[ENGINE]` nextQuestion: qué pregunta sigue
-3. `[RESOLVER]` rejected: entidades rechazadas y por qué
+**Rate limiting falso positivo:**
+→ Verificar `RATE_LIMIT_MAP` cleanup interval
+→ Ajustar `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW` en chat.js
 
-**Campos inferidos no se completan:**
-→ Son campos sin `.question`. El Engine los salta automáticamente.
-→ El Interpreter los extrae si el usuario los menciona.
-
----
-
-## Recomendaciones v2/v3
-
-- **v2.1**: Persistencia de sesiones en KV/Supabase
-- **v2.2**: Soporte para `conditionalOptions` (opciones que cambian según otro campo)
-- **v2.3**: Dashboard de analytics con eventos del EventBus
-- **v3.0**: Interfaz visual para crear/modificar servicios sin editar JSON
+**La IA responde sin usar herramientas:**
+→ PlanningEngine no detectó acción
+→ El system prompt no incluye instrucciones suficientes sobre tool calls

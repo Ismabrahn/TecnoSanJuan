@@ -1,0 +1,12 @@
+{
+  "$schema": "https://nexus.tecno-sanjuan.com/interview/v2/service-schema.json",
+  "serviceId": "invalid_badregex",
+  "serviceVersion": "1.0.0",
+  "serviceName": "Test Bad Regex",
+  "updatedAt": "2026-07-26T00:00:00Z",
+  "fields": [
+    { "id": "telefono", "type": "text", "label": "Tel", "question": "Tel?", "validation": { "pattern": "[invalid" } }
+  ],
+  "summaryTemplate": "test",
+  "whatsappTemplate": "test"
+}
