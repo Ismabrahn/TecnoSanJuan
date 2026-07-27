@@ -4,18 +4,24 @@ compatibility_date = "2025-07-26"
 
 [[kv_namespaces]]
 binding = "SESSION_KV"
-id = ""
-preview_id = ""
+id = "0614142e73594eb78ec0feb3f427c0f6"
+preview_id = "0614142e73594eb78ec0feb3f427c0f6"
 
 [env.production]
 kv_namespaces = [
-  { binding = "SESSION_KV", id = "" }
+  { binding = "SESSION_KV", id = "0614142e73594eb78ec0feb3f427c0f6" }
 ]
 [env.production.vars]
 ENVIRONMENT = "production"
 
 [env.development]
 vars = { ENVIRONMENT = "development" }
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+ENVIRONMENT = "development"
 
 [triggers]
 crons = ["* * * * *"]
