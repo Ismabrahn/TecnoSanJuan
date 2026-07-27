@@ -22,9 +22,3 @@ crons = ["* * * * *"]
 
 [vars]
 ENVIRONMENT = "development"
-
-[triggers]
-crons = ["* * * * *"]
-
-[vars]
-ENVIRONMENT = "development"
