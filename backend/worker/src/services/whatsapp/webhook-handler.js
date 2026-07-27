@@ -11,7 +11,7 @@ export class WebhookHandler {
     this.#mediaHandler = options.mediaHandler;
     this.#conversationManager = options.conversationManager;
     this.#conversationMemory = options.conversationMemory;
-    this.#engine = options.engine;
+    this.#runtime = options.runtime;
     this.#channel = options.channel;
     this.#eventBus = options.eventBus;
     this.#processedIds = options.processedIds || new Set();
@@ -24,7 +24,7 @@ export class WebhookHandler {
   #mediaHandler;
   #conversationManager;
   #conversationMemory;
-  #engine;
+  #runtime;
   #channel;
   #eventBus;
   #processedIds;
@@ -167,20 +167,21 @@ export class WebhookHandler {
       } catch {}
     }
 
-    if (this.#engine && conversation) {
+    if (this.#runtime && conversation) {
       try {
-        const response = await this.#engine.process(msg.text || '', {
-          profile: 'customer',
+        const response = await this.#runtime.handleMessage({
+          message: msg.text || '',
           sessionId: conversation.conversationId,
           clientId: contactInfo.clientId,
           conversationId: conversation.conversationId,
         });
 
-        if (response.type === 'conversation' && response.message) {
-          conversation.addMessage('assistant', response.message);
+        const outgoingMessage = response.message || response.question;
+        if (outgoingMessage) {
+          conversation.addMessage('assistant', outgoingMessage);
           if (this.#channel && phone) {
             try {
-              await this.#channel.send({ phone, message: response.message });
+              await this.#channel.send({ phone, message: outgoingMessage });
               await this.#channel.markAsRead(msg.messageId);
             } catch {}
           }

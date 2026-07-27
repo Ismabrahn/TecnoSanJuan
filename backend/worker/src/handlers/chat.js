@@ -1,9 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { chat } from '../services/openrouter.js';
 import { query } from '../services/supabase.js';
 import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { buildContext, buildMessages } from '../services/context.js';
 import { errorResponse } from '../middleware/error.js';
-import { createSession, extractName, detectWaitingState, detectWaitingNeedState, detectServiceFromMessage, buildNameResponse, STATES } from '../services/conversation/session.js';
+import { createSession } from '../services/conversation/session.js';
 import { defaultLogger } from '../services/logger.js';
 import { deleteSession } from '../services/session-store.js';
 
@@ -150,31 +151,16 @@ export async function handleChat(request, env) {
     try {
       const runtime = await createChatRuntime(env, chatContext);
       const session = body.session || createSession();
-      const sessionId = session.id || session.session_id || clientIp;
-
-      const preprocessed = await processSessionPre(env, session, userMessage);
-      if (preprocessed) {
-        return new Response(JSON.stringify({
-          response: preprocessed.response,
-          session: preprocessed.session,
-          context: chatContext,
-          source: 'ai',
-        }), {
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
+      const sessionId = session.id || session.session_id || crypto.randomUUID();
+      session.id = sessionId;
 
       const result = await runtime.handleMessage({
         message: userMessage,
         sessionId,
       });
 
-      if (result.type === 'chat' || result.type === 'conversation') {
-        processSessionPost(session, result.message);
-      }
-
       return new Response(JSON.stringify({
-        response: result.message || result.explanation || '',
+        response: result.message || result.question || result.explanation || '',
         session,
         context: chatContext,
         source: 'ai',
@@ -197,11 +183,19 @@ async function createChatRuntime(env, chatContext) {
   const { InterviewRouter } = await import('../services/nexus/interview-router.js');
   const { SchemaRegistry } = await import('../services/interview/v2/schema-registry.js');
   const { InterviewController } = await import('../services/interview/v2/interview-controller.js');
-  const { SessionStore } = await import('../services/interview/v2/session-store.js');
+  const { SupabaseSessionStore } = await import('../services/interview/v2/stores/supabase-session-store.js');
+  const { AIAdapter } = await import('../services/interview/v2/ai-adapter.js');
+  const { registerInterviewTools } = await import('../services/nexus/tools/interview-tools.js');
 
-  const sessionStore = new SessionStore(env);
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const sessionStore = new SupabaseSessionStore(supabase);
+  const aiAdapter = new AIAdapter({
+    apiKey: env.OPENROUTER_API_KEY,
+    baseUrl: env.OPENROUTER_BASE_URL,
+    defaultModel: env.OPENROUTER_MODEL,
+  });
   const schemaRegistry = new SchemaRegistry(env);
-  const interviewController = new InterviewController({ sessionStore, schemaRegistry });
+  const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
   const interviewRouter = new InterviewRouter({ schemaRegistry, interviewController });
 
   const engine = new NexusAIEngine({
@@ -217,43 +211,12 @@ async function createChatRuntime(env, chatContext) {
     },
   });
 
+  registerInterviewTools(engine.toolRegistry, { interviewController, schemaRegistry });
+  engine.profileManager.get('customer').allowedTools.push(
+    'questionGenerator',
+    'interpreter',
+    'interviewController'
+  );
+
   return new ChatRuntime({ engine, interviewRouter });
-}
-
-async function processSessionPre(env, session, message) {
-  if (session.estado_actual === STATES.WAITING_NAME) {
-    const name = extractName(message);
-    if (name) {
-      session.nombre_cliente = name;
-      session.estado_actual = STATES.WAITING_NEED;
-      return { response: buildNameResponse(name), session };
-    }
-  }
-
-  if (session.estado_actual === STATES.WAITING_NEED) {
-    const service = detectServiceFromMessage(message);
-    if (service === 'servicio_tecnico') {
-      session.estado_actual = STATES.IDENTIFIED;
-      return {
-        response: `Entendido. Para consultas sobre servicio técnico, te recomiendo contactarnos directamente por WhatsApp y uno de nuestros técnicos va a asesorarte. ¿Hay algo más en lo que pueda ayudarte?`,
-        session,
-      };
-    }
-  }
-
-  return null;
-}
-
-function processSessionPost(session, aiResponse) {
-  if (session.estado_actual === STATES.IDLE) {
-    const nextState = detectWaitingState(aiResponse);
-    if (nextState) {
-      session.estado_actual = nextState;
-    }
-  } else if (session.estado_actual === STATES.IDENTIFIED) {
-    const needState = detectWaitingNeedState(aiResponse);
-    if (needState) {
-      session.estado_actual = needState;
-    }
-  }
 }

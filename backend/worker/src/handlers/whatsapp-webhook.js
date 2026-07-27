@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { WhatsAppService } from '../services/whatsapp/whatsapp-service.js';
 import { ConversationManager } from '../services/nexus/conversation-manager.js';
 import { ConversationMemory } from '../services/nexus/conversation-memory.js';
@@ -6,12 +7,19 @@ import { ToolRegistry } from '../services/nexus/tool-registry.js';
 import { ToolExecutor } from '../services/nexus/tool-executor.js';
 import { ProfileManager } from '../services/nexus/profile-manager.js';
 import { PlanningEngine } from '../services/nexus/planning-engine.js';
+import { ChatRuntime } from '../services/nexus/chat-runtime.js';
 import { registerTools } from '../services/nexus/tools/index.js';
 import { registerConversationTools } from '../services/nexus/tools/conversation-tools.js';
+import { registerInterviewTools } from '../services/nexus/tools/interview-tools.js';
 import { registerWhatsAppRealTools } from '../services/whatsapp/whatsapp-real-tools.js';
 import { chat } from '../services/openrouter.js';
 import { query, update, insert } from '../services/supabase.js';
 import { ContactResolver } from '../services/whatsapp/contact-resolver.js';
+import { InterviewRouter } from '../services/nexus/interview-router.js';
+import { InterviewController } from '../services/interview/v2/interview-controller.js';
+import { SchemaRegistry } from '../services/interview/v2/schema-registry.js';
+import { SupabaseSessionStore } from '../services/interview/v2/stores/supabase-session-store.js';
+import { AIAdapter } from '../services/interview/v2/ai-adapter.js';
 
 let globalService = null;
 
@@ -33,6 +41,17 @@ function getService(env) {
   registerTools(registry, deps);
   registerConversationTools(registry, { conversationManager: cm, conversationMemory: mem });
 
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const sessionStore = new SupabaseSessionStore(supabase);
+  const aiAdapter = new AIAdapter({
+    apiKey: env.OPENROUTER_API_KEY,
+    baseUrl: env.OPENROUTER_BASE_URL,
+    defaultModel: env.OPENROUTER_MODEL,
+  });
+  const schemaRegistry = new SchemaRegistry(env);
+  const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
+  const interviewRouter = new InterviewRouter({ schemaRegistry, interviewController });
+
   const chatFn = async (prompt) => {
     const messages = [
       { role: 'system', content: profileManager.get('customer')?.systemPrompt || '' },
@@ -47,6 +66,15 @@ function getService(env) {
     planningEngine: new PlanningEngine({ chatFn }),
     chatFn,
   });
+
+  registerInterviewTools(engine.toolRegistry, { interviewController, schemaRegistry });
+  engine.profileManager.get('customer').allowedTools.push(
+    'questionGenerator',
+    'interpreter',
+    'interviewController'
+  );
+
+  const runtime = new ChatRuntime({ engine, interviewRouter });
 
   registerWhatsAppRealTools(registry, { conversationManager: cm });
 
@@ -66,7 +94,7 @@ function getService(env) {
     },
     conversationManager: cm,
     conversationMemory: mem,
-    engine,
+    runtime,
     contactResolver,
   });
 

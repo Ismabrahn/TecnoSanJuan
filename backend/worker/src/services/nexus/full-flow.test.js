@@ -28,7 +28,17 @@ describe('Full Flow Integration', () => {
       metricsCollector: metrics,
     });
 
-    const router = { shouldStartInterview: vi.fn().mockReturnValue(null) };
+    const router = {
+      shouldStartInterview: vi.fn().mockReturnValue(null),
+      hasActiveInterview: vi.fn().mockResolvedValue(false),
+      answerMessage: vi.fn().mockResolvedValue({
+        sessionId: null,
+        question: null,
+        interviewComplete: false,
+        saved: false,
+        validationError: null,
+      }),
+    };
     const runtime = new ChatRuntime({ engine, interviewRouter: router });
 
     const res1 = await runtime.handleMessage({ message: 'Hola', sessionId: 'full-flow' });

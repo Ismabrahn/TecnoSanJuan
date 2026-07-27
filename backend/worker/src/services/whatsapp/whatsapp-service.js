@@ -15,7 +15,7 @@ export class WhatsAppService {
     this.#mediaHandler = options.mediaHandler || (this.#channel ? new MediaHandler({ channel: this.#channel }) : null);
     this.#conversationManager = options.conversationManager;
     this.#conversationMemory = options.conversationMemory;
-    this.#engine = options.engine;
+    this.#runtime = options.runtime;
     this.#eventBus = options.eventBus;
     this.#processedIds = new Set();
     this.#metrics = {
@@ -37,7 +37,7 @@ export class WhatsAppService {
       mediaHandler: this.#mediaHandler,
       conversationManager: this.#conversationManager,
       conversationMemory: this.#conversationMemory,
-      engine: this.#engine,
+      runtime: this.#runtime,
       channel: this.#channel,
       eventBus: this.#eventBus,
       processedIds: this.#processedIds,
@@ -50,11 +50,11 @@ export class WhatsAppService {
   #parser;
   #contactResolver;
   #mediaHandler;
-  #conversationManager;
-  #conversationMemory;
-  #engine;
-  #eventBus;
-  #processedIds;
+    #conversationManager;
+    #conversationMemory;
+    #runtime;
+    #eventBus;
+    #processedIds;
   #metrics;
   #webhookHandler;
 

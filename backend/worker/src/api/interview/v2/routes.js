@@ -1,5 +1,8 @@
+import { createClient } from '@supabase/supabase-js';
 import { SchemaRegistry } from '../../../services/interview/v2/schema-registry.js';
 import { InterviewController } from '../../../services/interview/v2/interview-controller.js';
+import { SupabaseSessionStore } from '../../../services/interview/v2/stores/supabase-session-store.js';
+import { AIAdapter } from '../../../services/interview/v2/ai-adapter.js';
 import { createInterviewApi } from './controller.js';
 
 function jsonResponse(data, status = 200) {
@@ -88,6 +91,20 @@ export function createInterviewRouter({ schemaRegistry, interviewController }) {
       error: { code: 'NOT_FOUND', message: 'Endpoint no encontrado.' },
     }, 404);
   };
+}
+
+export function createInterviewHandler(env) {
+  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const sessionStore = new SupabaseSessionStore(supabase);
+  const aiAdapter = new AIAdapter({
+    apiKey: env.OPENROUTER_API_KEY,
+    baseUrl: env.OPENROUTER_BASE_URL,
+    defaultModel: env.OPENROUTER_MODEL,
+  });
+  const schemaRegistry = new SchemaRegistry(env);
+  const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
+  const router = createInterviewRouter({ schemaRegistry, interviewController });
+  return router;
 }
 
 const defaultRouter = createInterviewRouter({

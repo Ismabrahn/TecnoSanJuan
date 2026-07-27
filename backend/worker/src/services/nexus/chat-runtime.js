@@ -12,9 +12,36 @@ export class ChatRuntime {
 
   get engine() { return this.#engine; }
 
-  async handleMessage({ message, sessionId } = {}) {
+  shouldStartInterview(message) {
+    return this.#interviewRouter.shouldStartInterview(message);
+  }
+
+  async hasActiveInterview(sessionId) {
+    return this.#interviewRouter.hasActiveInterview(sessionId);
+  }
+
+  async handleMessage({ message, sessionId, clientId, conversationId } = {}) {
     if (!message || typeof message !== 'string') {
       return { type: 'error', error: 'message is required' };
+    }
+
+    const trimmedMessage = message.trim();
+    if (trimmedMessage.length === 0) {
+      return { type: 'error', error: 'message is required' };
+    }
+
+    const intent = this.#interviewRouter.shouldStartInterview(trimmedMessage);
+    if (intent && !sessionId) {
+      const schemaId = this.#interviewRouter.selectSchema(intent);
+      if (schemaId) {
+        const startResult = await this.#interviewRouter.startInterview(schemaId);
+        return this.#formatInterviewStart(startResult);
+      }
+    }
+
+    if (sessionId && await this.#interviewRouter.hasActiveInterview(sessionId)) {
+      const answerResult = await this.#interviewRouter.answerMessage(sessionId, trimmedMessage);
+      return this.#formatInterviewAnswer(answerResult);
     }
 
     const profile = sessionId && this.#hasInterviewSession(sessionId) ? 'interview' : 'customer';
@@ -22,6 +49,8 @@ export class ChatRuntime {
     const result = await this.#engine.process(message, {
       profile,
       sessionId: sessionId || undefined,
+      clientId: clientId || undefined,
+      conversationId: conversationId || undefined,
     });
 
     return this.#formatResponse(result, sessionId);
@@ -31,6 +60,61 @@ export class ChatRuntime {
     const context = this.#engine.contextManager.getSession(sessionId);
     if (!context) return false;
     return context.profile === 'interview';
+  }
+
+  #formatInterviewStart(result) {
+    if (!result || result.interviewComplete) {
+      return {
+        type: 'completed',
+        sessionId: result?.sessionId || null,
+        message: result?.summary || result?.question?.question || 'Solicitud procesada correctamente.',
+        data: result,
+      };
+    }
+
+    return {
+      type: 'interview',
+      sessionId: result.sessionId,
+      question: result.question?.question || '',
+      fieldId: result.question?.fieldId || null,
+      retry: false,
+    };
+  }
+
+  #formatInterviewAnswer(result) {
+    if (result.cancelled) {
+      return {
+        type: 'chat',
+        message: 'Entrevista cancelada. ¿En qué más puedo ayudarte?',
+      };
+    }
+
+    if (result.help) {
+      return {
+        type: 'interview',
+        sessionId: result.sessionId,
+        question: result.question?.question || '',
+        fieldId: result.question?.fieldId || null,
+        retry: false,
+      };
+    }
+
+    if (result.interviewComplete) {
+      return {
+        type: 'completed',
+        sessionId: result.sessionId,
+        message: result.summary || 'Solicitud procesada correctamente.',
+        data: result,
+      };
+    }
+
+    return {
+      type: 'interview',
+      sessionId: result.sessionId,
+      question: result.question?.question || '',
+      fieldId: result.question?.fieldId || null,
+      retry: result.validationError !== null && result.validationError !== undefined,
+    };
   }
 
   #formatResponse(result, sessionId) {

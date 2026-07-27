@@ -70,7 +70,9 @@ export function createInterviewApi({ schemaRegistry, interviewController }) {
       const result = await interviewController.start(schema);
       return ok({
         sessionId: result.sessionId,
+        completed: result.interviewComplete,
         question: formatQuestion(result.question),
+        summary: result.summary || null,
       });
     } catch (err) {
       if (err instanceof InterviewError) {
@@ -120,6 +122,7 @@ export function createInterviewApi({ schemaRegistry, interviewController }) {
       sessionId: raw.sessionId,
       completed: raw.interviewComplete,
       question: formatQuestion(raw.question),
+      summary: raw.summary || null,
     });
   }
 

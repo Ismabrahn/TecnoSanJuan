@@ -79,4 +79,16 @@ export class InterviewRouter {
       interviewComplete: result.interviewComplete,
     };
   }
+
+  async hasActiveInterview(sessionId) {
+    return this.#interviewController.hasSession(sessionId);
+  }
+
+  async answerMessage(sessionId, message) {
+    return this.#interviewController.answerMessage(sessionId, message);
+  }
+
+  async getInterviewSession(sessionId) {
+    return this.#interviewController.getSession(sessionId);
+  }
 }

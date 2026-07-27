@@ -20,7 +20,7 @@ import { handleChat, handleHealth } from './handlers/chat.js';
 import { requireAdmin } from './middleware/auth.js';
 import { handleOptions, getCorsHeaders } from './middleware/cors.js';
 import { errorResponse, handleError } from './middleware/error.js';
-import { handleInterviewV2 } from './api/interview/v2/routes.js';
+import { createInterviewHandler } from './api/interview/v2/routes.js';
 
 const PUBLIC_PREFIX = '/api/public/';
 const ADMIN_PREFIX = '/api/admin/';
@@ -154,6 +154,7 @@ export async function handleRequest(request, env) {
     const INTERVIEW_PREFIX = '/api/interview/v2/';
     if (path.startsWith(INTERVIEW_PREFIX)) {
       const remainder = path.slice(INTERVIEW_PREFIX.length);
+      const handleInterviewV2 = createInterviewHandler(env);
       const response = await handleInterviewV2(request, env, remainder);
       return addCors(response, corsHeaders);
     }

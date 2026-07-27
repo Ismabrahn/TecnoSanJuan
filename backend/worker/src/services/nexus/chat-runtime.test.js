@@ -9,6 +9,14 @@ function createMockEngine(chatFn) {
 function createMockRouter() {
   return {
     shouldStartInterview: vi.fn().mockReturnValue(null),
+    hasActiveInterview: vi.fn().mockResolvedValue(false),
+    answerMessage: vi.fn().mockResolvedValue({
+      sessionId: null,
+      question: null,
+      interviewComplete: false,
+      saved: false,
+      validationError: null,
+    }),
   };
 }
 

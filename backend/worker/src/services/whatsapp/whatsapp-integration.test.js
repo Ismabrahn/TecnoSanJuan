@@ -78,15 +78,15 @@ describe('WhatsApp Integration', () => {
     expect(conv.history).toHaveLength(1);
   });
 
-  it('full flow: auto-reply when engine available', async () => {
+  it('full flow: auto-reply when runtime available', async () => {
     const cm = new ConversationManager();
     const channel = { markAsRead: vi.fn(), send: vi.fn().mockResolvedValue({ success: true }) };
-    const engine = { process: vi.fn().mockResolvedValue({ type: 'conversation', message: 'Hola, en que puedo ayudarte?' }) };
+    const runtime = { handleMessage: vi.fn().mockResolvedValue({ type: 'chat', message: 'Hola, en que puedo ayudarte?' }) };
 
     const ws = new WhatsAppService({
       conversationManager: cm,
       channel,
-      engine,
+      runtime,
       config: { WEBHOOK_VERIFY_TOKEN: 'test' },
     });
 

@@ -1,6 +1,8 @@
 import { StateKeeper } from './state-keeper.js';
 import { FlowEvaluator } from './flow-evaluator.js';
 import { QuestionGenerator } from './question-generator.js';
+import { Interpreter, INTENTS } from './interpreter.js';
+import { InferenceEngine } from './inference-engine.js';
 import { MemorySessionStore } from './stores/memory-session-store.js';
 import { deepFreeze } from './utils.js';
 import { InterpreterError } from './errors.js';
@@ -135,11 +137,78 @@ function makeEmptyInterpreterResult() {
 export class InterviewController {
   sessionStore;
   #questionGenerator;
+  #interpreter;
+  #aiAdapter;
 
   constructor(options = {}) {
     this.sessionStore = options.sessionStore || new MemorySessionStore();
+    this.#aiAdapter = options.aiAdapter || null;
     this.#questionGenerator = options.questionGenerator
-      || new QuestionGenerator({ aiAdapter: options.aiAdapter || null });
+      || new QuestionGenerator({ aiAdapter: this.#aiAdapter });
+    this.#interpreter = options.interpreter
+      || (this.#aiAdapter ? new Interpreter({ aiAdapter: this.#aiAdapter }) : null);
+  }
+
+  // ── Private: persist and evaluate ─────────────────────────────
+
+  async #persistAndGenerate(session) {
+    await this.sessionStore.update(session.sessionId, { state: session.state });
+
+    const flowResult = FlowEvaluator.evaluate(session.schema, session.state);
+    const interpreterResult = makeEmptyInterpreterResult();
+    const question = await this.#questionGenerator.generate(
+      session.schema, session.state, flowResult, interpreterResult
+    );
+
+    const interviewComplete = flowResult.isComplete || question.question === null;
+    return { flowResult, question, interviewComplete };
+  }
+
+  #applyInferences(session) {
+    const inferenceResult = InferenceEngine.infer(session.schema, session.state);
+    for (const [fieldId, value] of Object.entries(inferenceResult.inferredValues)) {
+      if (!session.state.isFieldCompleted(fieldId)) {
+        const applied = inferenceResult.appliedRules.find(r => r.fieldId === fieldId);
+        const inferenceId = applied ? `inference-${applied.ruleIndex}` : null;
+        session.state.setInferredValue(fieldId, value, inferenceId);
+      }
+    }
+    return inferenceResult;
+  }
+
+  #buildSummary(session) {
+    const schema = session.schema;
+    const state = session.state;
+    const completedFields = state.getCompletedFields();
+    const values = {};
+    const labels = {};
+
+    for (const field of schema.fields || []) {
+      const entry = completedFields[field.id];
+      if (entry) {
+        values[field.id] = entry.value;
+        if (field.options && field.options.length > 0) {
+          const match = field.options.find(o => o.value === entry.value);
+          labels[field.id] = match ? (match.label || match.value) : entry.value;
+        } else {
+          labels[field.id] = entry.value;
+        }
+      } else {
+        values[field.id] = '';
+        labels[field.id] = '';
+      }
+    }
+
+    const template = schema.summaryTemplate || 'Solicitud completada. Gracias.';
+    const rendered = template
+      .replace(/\{\{(\w+):label\}\}/g, (_, key) => String(labels[key] ?? ''))
+      .replace(/\{\{(\w+)\}\}/g, (_, key) => {
+        if (key === 'interviewId') return state.getInterviewId();
+        if (key === 'timestamp') return new Date().toLocaleString('es-AR');
+        return String(values[key] ?? '');
+      });
+
+    return rendered;
   }
 
   async start(schema) {
@@ -170,10 +239,13 @@ export class InterviewController {
       schema, state, flowResult, interpreterResult
     );
 
+    const interviewComplete = flowResult.isComplete || question.question === null;
+
     return deepFreeze({
       sessionId,
       question,
-      interviewComplete: flowResult.isComplete || question.question === null,
+      interviewComplete,
+      summary: interviewComplete ? this.#buildSummary({ sessionId, schema, state }) : null,
     });
   }
 
@@ -233,19 +305,129 @@ export class InterviewController {
     }
 
     session.state.setUserValue(fieldId, value);
+    this.#applyInferences(session);
 
-    const flowResult = FlowEvaluator.evaluate(session.schema, session.state);
-    const interpreterResult = makeEmptyInterpreterResult();
-    const question = await this.#questionGenerator.generate(
-      session.schema, session.state, flowResult, interpreterResult
-    );
+    const { question, interviewComplete } = await this.#persistAndGenerate(session);
 
     return deepFreeze({
       sessionId,
       question,
-      interviewComplete: flowResult.isComplete || question.question === null,
+      interviewComplete,
       saved: true,
       validationError: null,
+      summary: interviewComplete ? this.#buildSummary(session) : null,
+    });
+  }
+
+  async answerMessage(sessionId, message) {
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new InterpreterError('IC_INVALID_SESSION', 'SessionId must be a non-empty string');
+    }
+
+    const session = await this.sessionStore.get(sessionId);
+    if (!session) {
+      throw new InterpreterError('IC_SESSION_NOT_FOUND', `Session '${sessionId}' not found`);
+    }
+
+    if (typeof message !== 'string' || message.trim().length === 0) {
+      throw new InterpreterError('IC_INVALID_MESSAGE', 'Message must be a non-empty string');
+    }
+
+    if (!this.#interpreter) {
+      throw new InterpreterError('IC_NO_INTERPRETER', 'Interpreter not available');
+    }
+
+    const interpreted = await this.#interpreter.interpret(
+      session.schema,
+      session.state,
+      message.trim()
+    );
+
+    if (interpreted.detectedIntent === INTENTS.CANCEL) {
+      await this.sessionStore.delete(sessionId);
+      return deepFreeze({
+        sessionId,
+        question: null,
+        interviewComplete: false,
+        saved: false,
+        cancelled: true,
+        detectedIntent: INTENTS.CANCEL,
+        validationError: null,
+      });
+    }
+
+    if (interpreted.detectedIntent === INTENTS.FINISH) {
+      await this.sessionStore.update(sessionId, { state: session.state });
+      return deepFreeze({
+        sessionId,
+        question: null,
+        interviewComplete: true,
+        saved: false,
+        finished: true,
+        detectedIntent: INTENTS.FINISH,
+        validationError: null,
+        summary: this.#buildSummary(session),
+      });
+    }
+
+    if (interpreted.detectedIntent === INTENTS.HELP) {
+      const { question } = await this.#persistAndGenerate(session);
+      return deepFreeze({
+        sessionId,
+        question,
+        interviewComplete: false,
+        saved: false,
+        help: true,
+        detectedIntent: INTENTS.HELP,
+        validationError: null,
+      });
+    }
+
+    const extracted = Object.entries(interpreted.extractedFields || {});
+    let savedCount = 0;
+    let validationError = null;
+    let firstInvalidField = null;
+
+    for (const [fieldId, value] of extracted) {
+      if (session.state.isFieldCompleted(fieldId)) continue;
+
+      const field = session.schema.fields.find(f => f.id === fieldId);
+      if (!field) continue;
+
+      const errors = validateFieldValue(field, value);
+      if (errors.length > 0) {
+        if (!validationError) {
+          validationError = errors.join(' ');
+          firstInvalidField = fieldId;
+        }
+        continue;
+      }
+
+      session.state.setUserValue(fieldId, value);
+      savedCount++;
+    }
+
+    this.#applyInferences(session);
+    await this.sessionStore.update(sessionId, { state: session.state });
+
+    const flowResult = FlowEvaluator.evaluate(session.schema, session.state);
+    const interpreterResult = validationError
+      ? makeRetryInterpreterResult(firstInvalidField, interpreted.extractedFields[firstInvalidField])
+      : makeEmptyInterpreterResult();
+    const question = await this.#questionGenerator.generate(
+      session.schema, session.state, flowResult, interpreterResult
+    );
+    const interviewComplete = !validationError && (flowResult.isComplete || question.question === null);
+
+    return deepFreeze({
+      sessionId,
+      question,
+      interviewComplete,
+      saved: savedCount > 0,
+      validationError,
+      detectedIntent: interpreted.detectedIntent,
+      interpretedFields: Object.keys(interpreted.extractedFields || {}),
+      summary: interviewComplete ? this.#buildSummary(session) : null,
     });
   }
 
@@ -264,11 +446,13 @@ export class InterviewController {
     const question = await this.#questionGenerator.generate(
       session.schema, session.state, flowResult, interpreterResult
     );
+    const interviewComplete = flowResult.isComplete || question.question === null;
 
     return deepFreeze({
       sessionId,
       question,
-      interviewComplete: flowResult.isComplete || question.question === null,
+      interviewComplete,
+      summary: interviewComplete ? this.#buildSummary(session) : null,
     });
   }
 

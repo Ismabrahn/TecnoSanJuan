@@ -71,8 +71,8 @@ describe('registerInterviewTools', () => {
     const registry = new ToolRegistry();
     registerInterviewTools(registry, { interviewController });
     const tool = registry.get('interviewController');
-    const result = await tool.execute({ action: 'next', data: { prevAnswer: 'ok' } });
-    expect(interviewController.next).toHaveBeenCalledWith({ prevAnswer: 'ok' });
+    const result = await tool.execute({ action: 'next', data: { sessionId: 's-1' } });
+    expect(interviewController.next).toHaveBeenCalledWith('s-1');
   });
 
   it('questionGenerator requires schema and answers params', async () => {
