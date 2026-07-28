@@ -101,7 +101,7 @@ export function createInterviewHandler(env) {
     baseUrl: env.OPENROUTER_BASE_URL,
     defaultModel: env.OPENROUTER_MODEL,
   });
-  const schemaRegistry = new SchemaRegistry(env);
+  const schemaRegistry = new SchemaRegistry({ skipValidation: env.ENVIRONMENT === 'production' });
   const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
   const router = createInterviewRouter({ schemaRegistry, interviewController });
   return router;

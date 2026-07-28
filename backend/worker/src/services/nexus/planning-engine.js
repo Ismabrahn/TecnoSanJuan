@@ -31,10 +31,12 @@ ${JSON.stringify({
 User request: "${userInput}"
 
 Produce a JSON plan. Each step must be a valid tool call.
-Format: {"plan": [{"tool": "toolName", "params": {"key": "value"}}], "explanation": "why this plan"}
+Format: {"plan": [{"tool": "toolName", "params": {"key": "value"}}], "explanation": "mensaje amable y natural en español para el usuario final"}
 
 If the request is conversational (no tools needed), respond with:
-{"plan": [], "explanation": "conversational response text"}
+{"plan": [], "explanation": "respuesta conversacional amable en español para el usuario final"}
+
+The explanation MUST be the actual message shown to the user. It MUST be in Spanish. It MUST NOT describe the internal plan, tools, or reasoning. It MUST NOT start with phrases like "The plan..." or "This plan...".
 
 Respond ONLY with valid JSON.`;
 

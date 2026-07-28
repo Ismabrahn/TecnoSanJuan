@@ -11,9 +11,9 @@ const INTENT_PATTERNS = {
     /\b(se\s+)?rompi(o|ó)(\s|$)/i,
     /\b(pantalla|bater[ií]a|cargador|golpe)\b/i,
     /(^|\s)(pinch[oó]|moj[oó]|mojad[ao])(\s|$)/i,
-    /\b(celular|telefono|notebook|laptop|tablet|equipo)\s+(no\s+)?(prende|funciona|carga|anda)\b/i,
-    /\b(arreglar|reparar)\s+(mi\s+|una\s+)?(cel|telefono|notebook|pc|tablet|compu)\b/i,
-    /\b(repar[ao]|arregl[oae])\s+(de\s+)?(celular|telefono|notebook|pantalla|tablet|pc|equipo)\b/i,
+    /\b(celular|tel[ée]fono|telefono|notebook|laptop|tablet|equipo)\s+(no\s+)?(prende|funciona|carga|anda)\b/i,
+    /\b(arreglar|reparar)\s+(mi\s+|una\s+)?(celular|tel[ée]fono|telefono|notebook|pc|tablet|compu)\b/i,
+    /\b(repar[aoaer]|arregl[oaer])\s+(de\s+)?(celular|tel[ée]fono|telefono|notebook|pantalla|tablet|pc|equipo)\b/i,
   ],
   'print-order': [
     /\b(impresi[oó]n|imprim(ir|o))\s+(3d|3D|tres\s+d)\b/i,

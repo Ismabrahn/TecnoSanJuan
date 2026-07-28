@@ -5,10 +5,10 @@ import repairRequest from "./schemas/repair-request.json" with { type: "json" };
 import metaSchema from "./interview.meta-schema.json" with { type: "json" };
 
 export const BUILT_IN_SCHEMAS = {
-  budget_request: budgetRequest,
-  impresion_3d: impresion3d,
-  print_order: printOrder,
-  repair_request: repairRequest,
+  'budget-request': budgetRequest,
+  'impresion_3d': impresion3d,
+  'print-order': printOrder,
+  'repair-request': repairRequest,
 };
 
 export const META_SCHEMA = metaSchema;

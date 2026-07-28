@@ -194,7 +194,7 @@ async function createChatRuntime(env, chatContext) {
     baseUrl: env.OPENROUTER_BASE_URL,
     defaultModel: env.OPENROUTER_MODEL,
   });
-  const schemaRegistry = new SchemaRegistry(env);
+  const schemaRegistry = new SchemaRegistry({ skipValidation: env.ENVIRONMENT === 'production' });
   const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
   const interviewRouter = new InterviewRouter({ schemaRegistry, interviewController });
 

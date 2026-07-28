@@ -31,7 +31,8 @@ export class ChatRuntime {
     }
 
     const intent = this.#interviewRouter.shouldStartInterview(trimmedMessage);
-    if (intent && !sessionId) {
+    const hasActiveInterview = sessionId ? await this.#interviewRouter.hasActiveInterview(sessionId) : false;
+    if (intent && !hasActiveInterview) {
       const schemaId = this.#interviewRouter.selectSchema(intent);
       if (schemaId) {
         const startResult = await this.#interviewRouter.startInterview(schemaId);
@@ -39,7 +40,7 @@ export class ChatRuntime {
       }
     }
 
-    if (sessionId && await this.#interviewRouter.hasActiveInterview(sessionId)) {
+    if (sessionId && hasActiveInterview) {
       const answerResult = await this.#interviewRouter.answerMessage(sessionId, trimmedMessage);
       return this.#formatInterviewAnswer(answerResult);
     }
@@ -148,10 +149,16 @@ export class ChatRuntime {
           };
         }
         const questionResult = result.results.find(r => r.toolName === 'questionGenerator');
+        const interviewStart = result.results.find(r =>
+          r.toolName === 'interviewController' &&
+          r.success &&
+          r.data?.question?.question
+        );
         return {
           type: 'interview',
-          sessionId,
-          question: questionResult?.data?.question || result.explanation,
+          sessionId: interviewStart?.data?.sessionId || sessionId,
+          question: questionResult?.data?.question || interviewStart?.data?.question?.question || result.explanation,
+          fieldId: questionResult?.data?.field || interviewStart?.data?.question?.fieldId || null,
           retry: failedTools.length > 0,
         };
       }

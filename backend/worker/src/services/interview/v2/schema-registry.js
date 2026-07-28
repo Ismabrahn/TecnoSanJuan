@@ -16,12 +16,14 @@ export class SchemaRegistry {
   #cache;
   #ajv;
   #metaSchemaId;
+  #skipValidation;
 
   constructor(options = {}) {
     this.#cache = new Map();
     // schemasDir option is kept for API compatibility but ignored;
     // schemas are now bundled as static ES module imports.
     void options.schemasDir;
+    this.#skipValidation = options.skipValidation || false;
     this.#ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(this.#ajv);
     this.#metaSchemaId = null;
@@ -32,13 +34,13 @@ export class SchemaRegistry {
       return this.#cache.get(serviceId);
     }
 
-    await this.#ensureMetaSchema();
-
     const schema = await this.#loadBuiltIn(serviceId);
 
-    this.#validateMeta(schema, serviceId);
-
-    this.#validateRelational(schema, serviceId);
+    if (!this.#skipValidation) {
+      await this.#ensureMetaSchema();
+      this.#validateMeta(schema, serviceId);
+      this.#validateRelational(schema, serviceId);
+    }
 
     const frozen = deepFreeze(schema);
     this.#cache.set(serviceId, frozen);
@@ -78,7 +80,7 @@ export class SchemaRegistry {
   }
 
   async #loadBuiltIn(serviceId) {
-    if (typeof serviceId !== 'string' || !/^[a-z][a-zA-Z0-9_]*$/.test(serviceId)) {
+    if (typeof serviceId !== 'string' || !/^[a-z][a-zA-Z0-9_-]*$/.test(serviceId)) {
       throw new SchemaError(
         'SCHEMA_INVALID_SERVICE_ID',
         `Invalid serviceId format: '${serviceId}'`,
