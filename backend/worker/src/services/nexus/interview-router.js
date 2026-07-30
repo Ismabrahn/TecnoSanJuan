@@ -1,26 +1,20 @@
 const INTENT_PATTERNS = {
   'budget-request': [
-    /\bcu[aá]nto\s+(cuesta|vale|cobran|sale)\b/i,
-    /\b(precio[s]?|presupuesto|cotizaci[oó]n|costo|tarifa)\b/i,
-    /\bquier[oó]\s+saber\s+(el\s+)?(precio|presupuesto)\b/i,
-    /\b(informaci[oó]n|info)\s+(de\s+)?(precios|costos)\b/i,
-    /\b(cu[aá]nto|presupuesto)\s+(cuesta|sale|vale|saldr[íi]a)\b/i,
+    /\b(necesito|quiero|solicito)\s+(un\s+)?(presupuesto|cotizaci[oó]n)\b/i,
+    /\b(cu[aá]nto\s+(cuesta|vale|cobran|sale)|precio|costo)\s+(para\s+)?(arreglar|reparar|cambiar|el\s+arreglo)\b/i,
+    /\b(pasame|me\s+pasas)\s+(un\s+)?(presupuesto|precio)\b/i,
   ],
   'repair-request': [
-    /\b(no\s+)?(prende|enciende|arranca|funciona|carga|anda)\b/i,
-    /\b(se\s+)?rompi(o|ó)(\s|$)/i,
-    /\b(pantalla|bater[ií]a|cargador|golpe)\b/i,
-    /(^|\s)(pinch[oó]|moj[oó]|mojad[ao])(\s|$)/i,
-    /\b(celular|tel[ée]fono|telefono|notebook|laptop|tablet|equipo)\s+(no\s+)?(prende|funciona|carga|anda)\b/i,
-    /\b(arreglar|reparar)\s+(mi\s+|una\s+)?(celular|tel[ée]fono|telefono|notebook|pc|tablet|compu)\b/i,
-    /\b(repar[aoaer]|arregl[oaer])\s+(de\s+)?(celular|tel[ée]fono|telefono|notebook|pantalla|tablet|pc|equipo)\b/i,
+    /\b(mi\s+|el\s+)?(celular|tel[ée]fono|notebook|pc|tablet|equipo)\s+(no\s+)?(prende|enciende|arranca|funciona|carga|anda)\b/i,
+    /\b(se\s+)?(me\s+)?rompi[oó]\s+(la\s+|el\s+)?(pantalla|celular|tel[ée]fono|vidrio|pin)\b/i,
+    /\b(necesito|quiero)\s+(arreglar|reparar|cambiar)\b/i,
+    /\b(reparaci[oó]n|arreglo)\s+de\s+(celular|tel[ée]fono|notebook|pantalla|tablet|pc|equipo)\b/i,
+    /(^|\s)se\s+(me\s+)?(cay[oó]|moj[oó]|golpe[oó])(\s|$)/i,
   ],
   'print-order': [
-    /\b(impresi[oó]n|imprim(ir|o))\s+(3d|3D|tres\s+d)\b/i,
-    /\b(pieza|figura|modelo|diseño)\s+(3d|3D|impreso|impresa)\b/i,
-    /\b(necesito|quiero)\s+(un\s+)?(diseño|pieza|impresi[oó]n)\b/i,
-    /\bimpres[ióo]n\s+3d\b/i,
-    /\b(imprimime|imprim[ií]s?)\s+(una\s+)?(pieza|figura|modelo)\b/i,
+    /\b(necesito|quiero)\s+(imprimir|una\s+impresi[oó]n)\b/i,
+    /\b(imprimime|imprim[ií]s)\s+(una\s+)?(pieza|figura|modelo|dise[ñn]o)\b/i,
+    /\b(presupuesto|cotizaci[oó]n)\s+(para\s+)?impresi[oó]n\b/i,
   ],
 };
 

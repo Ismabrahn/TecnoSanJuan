@@ -16,6 +16,10 @@ export class PlanningEngine {
       return `${t.name}: ${t.description || 'No description'}${params ? ` [${params}]` : ''}`;
     }).join('\n');
 
+    const historyText = (context.conversationHistory || [])
+      .map(msg => `${msg.role.toUpperCase()}: ${msg.content}`)
+      .join('\n');
+
     const planningPrompt = `${systemPrompt}
 
 AVAILABLE TOOLS:
@@ -27,6 +31,9 @@ ${JSON.stringify({
   currentIntent: context.currentIntent || null,
   workingMemory: context.workingMemory || {},
 }, null, 2)}
+
+CONVERSATION HISTORY:
+${historyText || 'No previous conversation'}
 
 User request: "${userInput}"
 

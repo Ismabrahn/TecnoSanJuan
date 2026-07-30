@@ -35,6 +35,34 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
   variable de entorno `ADMIN_ALLOWED_EMAILS`. Además, se agregó reporte
   detallado en el error 403.
 
+## 2026-07-30 — Fix de Comportamiento Conversacional y Memoria (Interview vs Chat)
+
+- **Motivo del cambio**: Consultas informativas simples (ej. "¿cuánto cuesta un mouse?")
+  estaban disparando falsos positivos en el `InterviewRouter`, iniciando flujos
+  de recolección de datos (pedir nombre/teléfono) que resultaban en solicitudes
+  de presupuesto vacías. Adicionalmente, el motor de IA principal (`PlanningEngine`)
+  sufría pérdida de contexto (amnesia) tras terminar un flujo o recibir mensajes
+  cortos (ej. "¿qué?"), debido a que el historial de conversación no se estaba
+  inyectando en su prompt.
+- **Archivos Modificados**: 
+  - `backend/worker/src/services/nexus/interview-router.js`
+  - `backend/worker/src/services/nexus/planning-engine.js`
+- **Decisión y Comportamiento Esperado**: 
+  1. Se ajustaron las expresiones regulares en `interview-router.js` (`budget-request`, 
+     `repair-request`, `print-order`) para requerir intenciones claras mediante verbos 
+     de acción (ej. "necesito reparar", "se me rompió", "cotización para arreglar"). 
+     Consultas de precios o información genérica ya no inician el `Interview` y
+     pasan directamente al LLM para una respuesta conversacional.
+  2. Se expuso el `conversationHistory` en la plantilla base del `PlanningEngine`.
+     El LLM ahora tiene acceso a toda la ventana de contexto de la sesión, permitiendo
+     mantener conversaciones naturales coherentes después de flujos interrumpidos
+     o consultas cortas.
+- **Nueva regla de arquitectura**: El `InterviewRouter` debe utilizar validaciones
+  estrictas (High Precision) en vez de coincidencia difusa (High Recall). Es preferible
+  que la IA atienda una solicitud vagamente formulada de forma conversacional hasta
+  que el usuario exprese una intención clara, antes que disparar un flujo estructurado
+  por error.
+
 ## 2026-07-28 — Cambios de código
 
 - `fix(interview)`: se resolvió el flujo de entrevista en producción y se previno
