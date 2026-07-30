@@ -1,13 +1,32 @@
-import { jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-export async function verifyAuth(token, jwtSecret) {
+let JWKS = null;
+
+function getJWKS(supabaseUrl) {
+  if (!JWKS) {
+    const jwksUrl = new URL('/auth/v1/.well-known/jwks.json', supabaseUrl);
+    JWKS = createRemoteJWKSet(jwksUrl);
+  }
+  return JWKS;
+}
+
+export async function verifyAuth(token, supabaseUrl) {
   if (!token) {
     return { authenticated: false, error: 'Token no proporcionado' };
   }
 
   try {
-    const secret = new TextEncoder().encode(jwtSecret);
-    const { payload } = await jwtVerify(token, secret);
+    if (!supabaseUrl) {
+      throw new Error('SUPABASE_URL no está configurado');
+    }
+
+    const JWKS = getJWKS(supabaseUrl);
+    
+    // Validamos usando las claves públicas (JWKS). Al provenir del JWKS de nuestra instancia,
+    // la firma criptográfica garantiza que fue emitido por nuestro Supabase.
+    const { payload } = await jwtVerify(token, JWKS, {
+      audience: 'authenticated'
+    });
 
     return {
       authenticated: true,

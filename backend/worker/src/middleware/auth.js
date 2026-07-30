@@ -7,7 +7,7 @@ export async function requireAdmin(request, env) {
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const result = await verifyAuth(token, env.SUPABASE_JWT_SECRET);
+  const result = await verifyAuth(token, env.SUPABASE_URL);
 
   if (!result.authenticated) {
     return { authenticated: false, error: result.error, status: 401 };
