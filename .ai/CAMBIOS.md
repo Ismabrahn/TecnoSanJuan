@@ -24,6 +24,16 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
   autenticación de Supabase.
 - El correo interno de autenticación se ajustó a `admin@tecnosanjuan.com`, que
   corresponde al usuario administrador existente en Supabase Auth.
+- **Fix Crítico de Autorización JWT**: Se restauró la validación del JWT de
+  acceso (User Token) utilizando `JWKS` (`createRemoteJWKSet`), para soportar el
+  algoritmo **ES256/RS256** configurado en la instancia de Supabase. Se removió
+  la validación estricta de la cadena del `issuer` que causaba falsos positivos
+  de error 401.
+- Se implementó un saneamiento riguroso en el middleware de autorización
+  (`middleware/auth.js`) para ignorar espacios, comillas accidentales y
+  diferencias de mayúsculas/minúsculas entre el email extraído del JWT y la
+  variable de entorno `ADMIN_ALLOWED_EMAILS`. Además, se agregó reporte
+  detallado en el error 403.
 
 ## 2026-07-28 — Cambios de código
 
