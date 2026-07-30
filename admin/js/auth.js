@@ -85,7 +85,7 @@ async function refreshToken(refreshToken) {
 }
 
 // El correo se mantiene interno para que el formulario solo pida contraseña.
-const ADMIN_EMAIL = 'cuatrinismaelabrahan@gmail.com';
+const ADMIN_EMAIL = 'admin@tecnosanjuan.com';
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');

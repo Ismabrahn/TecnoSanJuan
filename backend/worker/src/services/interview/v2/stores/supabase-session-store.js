@@ -54,6 +54,7 @@ export class SupabaseSessionStore extends SessionStore {
     });
 
     return deepFreeze({
+      sessionId,
       state: deepClone(stateJson),
       schema: deepFreeze(deepClone(schema)),
     });
@@ -63,6 +64,7 @@ export class SupabaseSessionStore extends SessionStore {
     if (this.#cache.has(sessionId)) {
       const cached = this.#cache.get(sessionId);
       return {
+        sessionId,
         state: cached.state,
         schema: deepFreeze(deepClone(cached.schema)),
       };
@@ -86,6 +88,7 @@ export class SupabaseSessionStore extends SessionStore {
     this.#cache.set(sessionId, { state, schema });
 
     return {
+      sessionId,
       state,
       schema: deepFreeze(deepClone(schema)),
     };

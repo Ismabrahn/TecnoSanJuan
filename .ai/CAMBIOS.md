@@ -22,6 +22,8 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 - El inicio de sesión del panel conserva una interfaz de solo contraseña; el
   correo administrador se define internamente para completar el flujo de
   autenticación de Supabase.
+- El correo interno de autenticación se ajustó a `admin@tecnosanjuan.com`, que
+  corresponde al usuario administrador existente en Supabase Auth.
 
 ## 2026-07-28 — Cambios de código
 

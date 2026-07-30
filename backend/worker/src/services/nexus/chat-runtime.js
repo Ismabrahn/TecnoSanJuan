@@ -68,6 +68,7 @@ export class ChatRuntime {
       return {
         type: 'completed',
         sessionId: result?.sessionId || null,
+        schemaId: result?.schemaId || null,
         message: result?.summary || result?.question?.question || 'Solicitud procesada correctamente.',
         data: result,
       };
@@ -76,6 +77,7 @@ export class ChatRuntime {
     return {
       type: 'interview',
       sessionId: result.sessionId,
+      schemaId: result.schemaId || null,
       question: result.question?.question || '',
       fieldId: result.question?.fieldId || null,
       retry: false,
@@ -94,6 +96,7 @@ export class ChatRuntime {
       return {
         type: 'interview',
         sessionId: result.sessionId,
+        schemaId: result.schemaId || null,
         question: result.question?.question || '',
         fieldId: result.question?.fieldId || null,
         retry: false,
@@ -104,6 +107,7 @@ export class ChatRuntime {
       return {
         type: 'completed',
         sessionId: result.sessionId,
+        schemaId: result.schemaId || null,
         message: result.summary || 'Solicitud procesada correctamente.',
         data: result,
       };
@@ -112,6 +116,7 @@ export class ChatRuntime {
     return {
       type: 'interview',
       sessionId: result.sessionId,
+      schemaId: result.schemaId || null,
       question: result.question?.question || '',
       fieldId: result.question?.fieldId || null,
       retry: result.validationError !== null && result.validationError !== undefined,
@@ -144,6 +149,7 @@ export class ChatRuntime {
           return {
             type: 'completed',
             sessionId,
+            schemaId: lastResult?.data?.schemaId || null,
             message: 'Solicitud procesada correctamente.',
             data: lastResult?.data,
           };
@@ -157,6 +163,7 @@ export class ChatRuntime {
         return {
           type: 'interview',
           sessionId: interviewStart?.data?.sessionId || sessionId,
+          schemaId: interviewStart?.data?.schemaId || questionResult?.data?.schemaId || null,
           question: questionResult?.data?.question || interviewStart?.data?.question?.question || result.explanation,
           fieldId: questionResult?.data?.field || interviewStart?.data?.question?.fieldId || null,
           retry: failedTools.length > 0,

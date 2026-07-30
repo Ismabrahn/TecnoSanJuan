@@ -243,6 +243,7 @@ export class InterviewController {
 
     return deepFreeze({
       sessionId,
+      schemaId: schema.serviceId,
       question,
       interviewComplete,
       summary: interviewComplete ? this.#buildSummary({ sessionId, schema, state }) : null,
@@ -297,6 +298,7 @@ export class InterviewController {
 
       return deepFreeze({
         sessionId,
+        schemaId: session.schema.serviceId,
         question,
         interviewComplete: false,
         saved: false,
@@ -311,6 +313,7 @@ export class InterviewController {
 
     return deepFreeze({
       sessionId,
+      schemaId: session.schema.serviceId,
       question,
       interviewComplete,
       saved: true,
@@ -347,6 +350,7 @@ export class InterviewController {
       await this.sessionStore.delete(sessionId);
       return deepFreeze({
         sessionId,
+        schemaId: session.schema.serviceId,
         question: null,
         interviewComplete: false,
         saved: false,
@@ -360,6 +364,7 @@ export class InterviewController {
       await this.sessionStore.update(sessionId, { state: session.state });
       return deepFreeze({
         sessionId,
+        schemaId: session.schema.serviceId,
         question: null,
         interviewComplete: true,
         saved: false,
@@ -374,6 +379,7 @@ export class InterviewController {
       const { question } = await this.#persistAndGenerate(session);
       return deepFreeze({
         sessionId,
+        schemaId: session.schema.serviceId,
         question,
         interviewComplete: false,
         saved: false,
@@ -383,7 +389,23 @@ export class InterviewController {
       });
     }
 
-    const extracted = Object.entries(interpreted.extractedFields || {});
+    let extracted = Object.entries(interpreted.extractedFields || {});
+
+    // Fallback: if the interpreter returned no fields and the user is not using
+    // a control intent, treat the message as the answer for the current pending field.
+    if (extracted.length === 0 &&
+        interpreted.detectedIntent !== INTENTS.CANCEL &&
+        interpreted.detectedIntent !== INTENTS.FINISH &&
+        interpreted.detectedIntent !== INTENTS.HELP) {
+      const nextFieldId = FlowEvaluator.getNextField(session.schema, session.state);
+      if (nextFieldId) {
+        const nextField = session.schema.fields.find(f => f.id === nextFieldId);
+        if (nextField && ['text', 'phone', 'email', 'number'].includes(nextField.type)) {
+          extracted = [[nextFieldId, message.trim()]];
+        }
+      }
+    }
+
     let savedCount = 0;
     let validationError = null;
     let firstInvalidField = null;
@@ -421,6 +443,7 @@ export class InterviewController {
 
     return deepFreeze({
       sessionId,
+      schemaId: session.schema.serviceId,
       question,
       interviewComplete,
       saved: savedCount > 0,
@@ -450,6 +473,7 @@ export class InterviewController {
 
     return deepFreeze({
       sessionId,
+      schemaId: session.schema.serviceId,
       question,
       interviewComplete,
       summary: interviewComplete ? this.#buildSummary(session) : null,

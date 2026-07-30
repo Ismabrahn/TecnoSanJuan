@@ -151,20 +151,35 @@ export async function handleChat(request, env) {
     try {
       const runtime = await createChatRuntime(env, chatContext);
       const session = body.session || createSession();
-      const sessionId = session.id || session.session_id || crypto.randomUUID();
-      session.id = sessionId;
+      const conversationSessionId = session.id || session.session_id || crypto.randomUUID();
+      session.id = conversationSessionId;
+
+      const interviewSessionId = body.interview?.sessionId;
+      const sessionId = interviewSessionId || conversationSessionId;
 
       const result = await runtime.handleMessage({
         message: userMessage,
         sessionId,
       });
 
-      return new Response(JSON.stringify({
+      const responseData = {
         response: result.message || result.question || result.explanation || '',
         session,
         context: chatContext,
         source: 'ai',
-      }), {
+      };
+
+      if (result.type === 'interview' || result.type === 'completed') {
+        responseData.interview = {
+          sessionId: result.sessionId,
+          active: result.type === 'interview',
+          complete: result.type === 'completed',
+          schemaId: result.schemaId || null,
+          currentField: result.type === 'completed' ? null : (result.fieldId || null),
+        };
+      }
+
+      return new Response(JSON.stringify(responseData), {
         headers: { 'Content-Type': 'application/json' },
       });
     } finally {

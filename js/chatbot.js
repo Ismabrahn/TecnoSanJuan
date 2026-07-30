@@ -88,9 +88,15 @@ export async function initChatbot() {
       if (data.session) sessionState = data.session;
       if (data.interview) {
         interviewState = data.interview;
+      }
+      if (interviewState && interviewState.active === false) {
+        interviewState = null;
+      }
+
+      if (interviewState) {
         addMessage(data.response, 'bot', 'ai');
         if (data.progress) updateProgress(data.progress);
-        if (data.interview.complete) {
+        if (data.interview && data.interview.complete) {
           console.log('[CHAT] entrevista completa, estado: presupuesto_completo');
           if (data.phone) phoneNumber = data.phone;
           renderWhatsAppSection(data.summary, data.structuredSummary, data.phone || phoneNumber);

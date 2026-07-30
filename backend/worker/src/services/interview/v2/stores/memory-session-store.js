@@ -11,6 +11,7 @@ export class MemorySessionStore extends SessionStore {
 
   create(sessionId, data) {
     this.#sessions.set(sessionId, {
+      sessionId,
       state: data.state,
       schema: deepClone(data.schema),
     });
@@ -20,6 +21,7 @@ export class MemorySessionStore extends SessionStore {
     const entry = this.#sessions.get(sessionId);
     if (!entry) return undefined;
     return {
+      sessionId,
       state: entry.state,
       schema: deepFreeze(deepClone(entry.schema)),
     };

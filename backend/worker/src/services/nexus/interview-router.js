@@ -75,6 +75,7 @@ export class InterviewRouter {
     const result = await this.#interviewController.start(schema);
     return {
       sessionId: result.sessionId,
+      schemaId: result.schemaId,
       question: result.question,
       interviewComplete: result.interviewComplete,
     };

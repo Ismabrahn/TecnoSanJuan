@@ -1,26 +1,13 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { jwtVerify } from 'jose';
 
-let JWKS = null;
-
-function getJWKS(supabaseUrl) {
-  if (!JWKS) {
-    const jwksUrl = new URL('/auth/v1/.well-known/jwks.json', supabaseUrl);
-    JWKS = createRemoteJWKSet(jwksUrl);
-  }
-  return JWKS;
-}
-
-export async function verifyAuth(token, supabaseUrl) {
+export async function verifyAuth(token, jwtSecret) {
   if (!token) {
     return { authenticated: false, error: 'Token no proporcionado' };
   }
 
   try {
-    const JWKS = getJWKS(supabaseUrl);
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: supabaseUrl.replace(/\/$/, '') + '/auth/v1',
-      audience: 'authenticated',
-    });
+    const secret = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jwtVerify(token, secret);
 
     return {
       authenticated: true,

@@ -7,14 +7,14 @@ export async function requireAdmin(request, env) {
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const result = await verifyAuth(token, env.SUPABASE_URL);
+  const result = await verifyAuth(token, env.SUPABASE_JWT_SECRET);
 
   if (!result.authenticated) {
     return { authenticated: false, error: result.error, status: 401 };
   }
 
   const allowedEmails = (env.ADMIN_ALLOWED_EMAILS || '').split(',').map(e => e.trim());
-  if (allowedEmails.length > 0 && result.email && !allowedEmails.includes(result.email)) {
+  if (allowedEmails.length > 0 && (!result.email || !allowedEmails.includes(result.email))) {
     return { authenticated: false, error: 'Email no autorizado', status: 403 };
   }
 
