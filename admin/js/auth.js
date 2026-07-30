@@ -1,6 +1,8 @@
-// Reemplazar con valores reales de Supabase (ver .env.example)
-const SUPABASE_URL = 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = 'your-supabase-anon-key';
+// Configuración pública de Supabase para el inicio de sesión del panel.
+// La autenticación usa una cuenta administradora fija; la interfaz solo solicita
+// la contraseña y nunca expone una clave service_role.
+const SUPABASE_URL = 'https://iqbbdrgajlhkfbvsvzto.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxYmJkcmdhamxoa2ZidnN2enRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NjgxOTEsImV4cCI6MjEwMDM0NDE5MX0.E7WbQSbMHsp_jFq_ZR5DKhOq9RjNzU7bGE-l66qWsYI';
 
 const SESSION_KEY = 'tecno_admin_session';
 
@@ -82,7 +84,8 @@ async function refreshToken(refreshToken) {
   };
 }
 
-const ADMIN_EMAIL = 'admin@example.com';
+// El correo se mantiene interno para que el formulario solo pida contraseña.
+const ADMIN_EMAIL = 'cuatrinismaelabrahan@gmail.com';
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
