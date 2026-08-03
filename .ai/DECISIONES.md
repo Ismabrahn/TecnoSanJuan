@@ -107,8 +107,14 @@ Motivo:
 
 ## Vitest como framework de tests
 
-El backend usa Vitest (1369+ tests, 71 archivos) con cobertura de todos los módulos
-del engine, interview, conversaciones, WhatsApp, admin, eventos y notificaciones.
+El backend usa Vitest (1369 tests, 71 archivos) con cobertura de todos los
+módulos del engine, interview, conversaciones, WhatsApp, admin, eventos y
+notificaciones.
+
+**Estado actual del baseline:** 1357 tests pasan, 12 fallan en
+`src/services/nexus/interview-router.test.js` (tests stale respecto a los patrones
+regex actuales del `InterviewRouter`, que fueron endurecidos a High Precision en
+2026-07-30).
 
 Motivo:
 - Compatible con ESM nativo (el Worker usa ESM).
