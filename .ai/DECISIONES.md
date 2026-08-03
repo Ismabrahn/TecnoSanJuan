@@ -156,3 +156,59 @@ Motivo:
 - Los schemas están disponibles en tiempo de compilación (son configuración, no
   datos).
 - El `schema-registry` carga todos los schemas al iniciar el Worker.
+
+---
+
+# Decisiones posteriores a la auditoría de arquitectura v1
+
+## Completitud de entrevistas
+
+La completitud natural de una entrevista se define por: **todos los campos
+`required` no-skipped están completos**. El campo `minimumRequired` numérico se
+elimina de los schemas actuales porque permitía marcar completa una solicitud con
+datos insuficientes para el negocio (nombre + teléfono).
+
+**Estado de implementación:** `repair-request.json` ya tiene `minimumRequired`
+eliminado en el working tree; `print-order.json` y `budget-request.json` aún lo
+conservan con valor `2`.
+
+El intent `FINISH` (usuario quiere terminar antes) sigue siendo válido y produce
+un **lead parcial**, detectable por la cantidad de `completedFields`. No se
+agregan nuevos valores al CHECK de `interview_sessions.status`.
+
+## Persistencia de finalización sin modo dry-run
+
+No se implementa un modo dry-run/simulación técnico separado. La validación de
+datos es un flujo de trabajo del panel admin: `repairs.status='received'` y
+`budgets.status='pending'` ya actúan como cola de revisión humana.
+
+Antes de insertar, el Completion Pipeline valida campos críticos del negocio. Si
+faltan, no se crea la entidad de negocio; los datos permanecen recuperables en
+`interview_sessions`.
+
+## Completion Pipeline como punto único de orquestación
+
+La lógica "entrevista completada → registro de negocio" no vive en
+`handlers/chat.js`. Vive en un módulo de dominio (`services/completion/`)
+invocable desde cualquier canal (web, WhatsApp, futuros) y desde tools/agents.
+
+## Corrección sobre Cloudflare KV
+
+Las sesiones de entrevista actuales se persisten únicamente en Supabase
+(`interview_sessions` vía `SupabaseSessionStore`). Cloudflare KV
+(`services/session-store.js`) es legacy para sesiones de conversación y se usa
+solo en reset/admin. No hay doble fuente de verdad para entrevistas.
+
+## Primer mensaje de una entrevista
+
+Se adopta estrategia en etapas:
+1. Persistir el mensaje en `state.metadata.initialMessage`.
+2. Extraer sugerencias a `state.metadata.suggestedFields` sin aplicar al flujo.
+3. Auto-aplicar solo con compuerta de confianza, tras observar calidad del
+   Interpreter en producción.
+
+## Botón WhatsApp
+
+El frontend usa el teléfono del negocio obtenido de `/api/public/business-info`
+como destino del botón WhatsApp. El backend no envía `data.phone` en la respuesta
+de completado para evitar duplicación de datos.

@@ -1,93 +1,171 @@
-# README.md — Nexus
+# Nexus Architecture v1
 
-## ¿Qué es este proyecto?
+## Propósito
 
-Nexus es el asistente de inteligencia artificial de Tecno San Juan (servicio técnico
-de celulares). No es solo un chatbot: es la capa que conecta a los clientes con los
-datos del negocio (reparaciones, presupuestos, clientes) y con el panel interno de
-administración.
+Nexus es el asistente de inteligencia artificial de Tecno San Juan. Conecta clientes (chat web y WhatsApp) con la operación del negocio (reparaciones, presupuestos, órdenes de impresión 3D, clientes) y con el panel administrativo.
 
-## Objetivo
+La **Arquitectura v1** define cómo organizar el sistema para que cualquier interfaz futura —nuevos canales, Tool Calling, MCP, agentes especializados, automatizaciones, memoria de conversaciones— reutilice los mismos servicios de dominio sin duplicar lógica.
 
-- Atender consultas de clientes automáticamente (chat web + WhatsApp).
-- Recopilar los datos necesarios para iniciar una reparación (módulo Interview).
-- Reducir trabajo repetitivo del servicio técnico.
-- Centralizar la información del negocio.
-- Servir de base escalable para administración interna (panel admin, presupuestos,
-  inventario, órdenes de trabajo).
+## Principios arquitectónicos
 
-## Usuarios
+1. **La IA no controla el flujo.** Razona, interpreta y elige tools. El flujo (entrevista activa, completitud, respuesta final) lo controla código determinístico (`ChatRuntime`, `InterviewRouter`, `FlowEvaluator`).
+2. **Tools como único mecanismo de acción.** Toda interacción de la IA con el mundo externo pasa por `ToolRegistry`.
+3. **Separación estricta: Adaptadores → Dominio → Infraestructura.** Los adaptadores (web, WhatsApp, admin) no conocen Supabase ni OpenRouter; hablan con handlers que componen servicios de dominio.
+4. **Estado fuera del motor.** `NexusAIEngine` y `InterviewController` no guardan estado. El estado vive en sesiones de conversación y de entrevista.
+5. **Entrevistas declarativas.** Un servicio nuevo se define mediante un schema JSON (`fields`, `skipIf`, `dependsOn`, `inferences`); el motor lo ejecuta sin cambios de código.
+6. **Finalización como pipeline de dominio.** Cuando una entrevista termina, un único punto de orquestación (Completion Pipeline) valida, resuelve cliente, crea la entidad de negocio y emite eventos. Ningún handler crea registros de negocio directamente.
+7. **Eventos para efectos secundarios.** Notificaciones, analytics y automatizaciones se desacoplan mediante el event bus/queue existente.
 
-- **Cliente final**: consulta por chat web o WhatsApp (horarios, info del negocio,
-  problemas de su dispositivo) y pasa por el flujo Interview para iniciar una
-  reparación.
-- **Tecno San Juan (admin)**: usa el panel administrativo para gestionar
-  conversaciones, clientes, reparaciones, presupuestos e historial.
+---
 
-## Tecnologías
+## Capas y componentes
 
-- **Frontend**: HTML/CSS/JavaScript vanilla (sin framework). Incluye página pública,
-  chatbot Nexus y panel administrativo.
-- **Backend**: Cloudflare Worker — recibe requests del frontend y de WhatsApp,
-  controla acceso a datos, conecta Supabase con la IA, procesa lógica sensible.
-- **Base de datos**: Supabase (PostgreSQL), con Auth y RLS (Row Level Security).
-- **IA**: OpenRouter API — permite cambiar de modelo sin atarse a un único proveedor.
-- **WhatsApp**: integración via Meta Cloud API para recibir y enviar mensajes.
-- **Tests**: Vitest. 1369+ tests en 71 archivos cubriendo todos los módulos del
-  backend.
+### 1. Adaptadores (interfaces externas)
 
-## Estructura del repositorio
+Responsabilidad: recibir input del mundo exterior y presentar output. **No contienen lógica de negocio.**
 
+| Componente | Tecnología | Ubicación | Responsabilidad |
+|---|---|---|---|
+| Chat web público | HTML + JS vanilla | `index.html`, `js/chatbot.js`, `js/api.js`, `js/renderer.js`, `js/whatsapp.js` | Widget de chat, envío de mensajes, botón WhatsApp, render de entrevistas. |
+| Panel administrativo | HTML + JS vanilla | `admin/index.html`, `admin/js/` | CRUD, dashboard, asistente IA interno. |
+| WhatsApp Adapter | Meta Cloud API | `services/whatsapp/`, `handlers/whatsapp-webhook.js` | Verificación de webhook, parseo de mensajes, envío de respuestas. |
+| API REST / Router | Cloudflare Worker | `router.js`, `handlers/*.js`, `api/interview/v2/routes.js` | Enrutamiento HTTP, rate limiting, auth, CORS, composición de servicios. |
+
+### 2. Dominio (lógica de negocio reusable)
+
+Responsabilidad: contener las reglas del negocio. **No depende de adaptadores.**
+
+| Componente | Ubicación | Responsabilidad |
+|---|---|---|
+| Interview v2 | `services/interview/v2/` | Recolección estructurada de datos: schemas, state, flow, questions, interpreter, validation. |
+| Completion Pipeline | `services/completion/` (planificado) | Único punto de orquestación de finalización: validación → cliente → entidad → evento. |
+| Business services | `services/business/` | CRUD de clientes, reparaciones, presupuestos, órdenes de impresión. |
+| Events | `services/events/` | Bus, cola, repositorio, worker y DLQ de eventos. |
+| Notifications | `services/notifications/` | Templates y canales de notificación. |
+
+### 3. Motor de IA (razonamiento + orquestación)
+
+Responsabilidad: interpretar lenguaje natural y ejecutar tools, **sin estado propio.**
+
+| Componente | Ubicación | Responsabilidad |
+|---|---|---|
+| ChatRuntime | `services/nexus/chat-runtime.js` | Decididor determinístico: ¿entrevista activa? → InterviewRouter; sino → NexusAIEngine. |
+| NexusAIEngine | `services/nexus/nexus-ai-engine.js` | Motor de IA: prompt, LLM, tool calls. |
+| PlanningEngine | `services/nexus/planning-engine.js` | Determina plan/intención sin ejecutar. |
+| ToolRegistry / ToolExecutor | `services/nexus/tool-*.js` | Registro y ejecución de herramientas. |
+| ProfileManager | `services/nexus/profile-manager.js` | Perfiles `customer`/`admin`/`superadmin` con `allowedTools[]`. |
+| Context/Conversation managers | `services/nexus/context-manager.js`, `conversation-manager.js`, `conversation-memory.js`, `conversation-session.js` | Estado de conversación en memoria (historial, tareas, metadata). |
+| Tools | `services/nexus/tools/` | Tools de conversación, admin e interview. |
+| AdminAssistant | `services/nexus/admin-assistant.js` | Variante del engine para el panel admin. |
+
+### 4. Infraestructura
+
+Responsabilidad: conectar con sistemas externos y servicios transversales.
+
+| Componente | Ubicación | Responsabilidad |
+|---|---|---|
+| Supabase client | `services/supabase.js` | Cliente PostgreSQL. |
+| OpenRouter adapter | `services/openrouter.js`, `services/interview/v2/ai-adapter.js` | LLM gateway. |
+| Web search | `services/websearch.js` | Búsqueda web. |
+| Session stores | `services/interview/v2/stores/` | `SupabaseSessionStore` (producción) y `MemorySessionStore` (tests). |
+| KV legacy | `services/session-store.js`, `services/conversation/session.js` | Sesiones legacy de conversación (solo reset/admin). |
+| Auth / JWT | `middleware/auth.js`, `utils/jwt.js` | Validación JWT, JWKS. |
+| Observability | `services/nexus/observability.js`, `services/logger.js` | Métricas y logs. |
+
+---
+
+## Flujo de datos
+
+### A. Mensaje del chat web
+
+```text
+js/chatbot.js → js/api.js → POST /chat → handlers/chat.js
+  → ChatRuntime.handleMessage()
+    → InterviewRouter (intención / entrevista activa)
+      → InterviewController (v2)
+        → SupabaseSessionStore (interview_sessions)
+    → o NexusAIEngine + tools
+  → Respuesta JSON { response, session, interview, summary?, structuredSummary?, progress? }
+→ js/chatbot.js renderiza
 ```
-tecno-san-juan/
-├── .ai/                     ← memoria estructurada del proyecto (este directorio)
-├── admin/                   ← panel administrativo (HTML/CSS/JS)
-│   ├── index.html
-│   ├── login.html
-│   └── js/
-│       ├── admin.js
-│       ├── auth.js
-│       ├── config.js
-│       ├── ai-assistant.js
-│       └── modules/         ← módulos de UI: clients, repairs, budgets, dashboard…
-├── backend/
-│   └── worker/              ← Cloudflare Worker (Node/ESM)
-│       ├── src/
-│       │   ├── router.js
-│       │   ├── handlers/    ← chat.js (WhatsApp), admin.js, public.js
-│       │   ├── middleware/  ← auth, cors, error
-│       │   ├── services/
-│       │   │   ├── nexus/   ← motor principal de IA + gestión de conversaciones
-│       │   │   ├── interview/v2/ ← subsistema de recolección de datos (versión actual)
-│       │   │   ├── business/  ← client-service, repair-service, budget-service
-│       │   │   ├── events/    ← event-bus, event-queue, event-pipeline
-│       │   │   ├── notifications/ ← notification-service, templates
-│       │   │   └── whatsapp/  ← webhook, parser, meta-channel
-│       │   └── utils/
-│       └── supabase/migrations/
-├── css/                     ← estilos del frontend público
-├── js/                      ← JS del frontend público (chatbot.js, api.js…)
-├── database/                ← documentación de base de datos
-├── docs/                    ← documentación adicional
-└── index.html               ← página pública principal
+
+### B. Mensaje de WhatsApp
+
+```text
+Meta → POST /webhook/whatsapp → services/whatsapp/webhook-handler.js
+  → handlers/chat.js (mismo ChatRuntime)
+  → services/whatsapp/meta-whatsapp-channel.sendMessage()
 ```
 
-## Estado actual
+### C. Finalización de entrevista → negocio
 
-MVP avanzado. El backend está completo con arquitectura de producción: engine de IA
-con tool calls, subsistema de entrevistas (Interview v2), integración WhatsApp,
-eventos, notificaciones y tests exhaustivos. El panel admin está en construcción
-activa. Ver MODULOS.md para el estado detallado por módulo.
+```text
+InterviewController → interviewComplete=true
+  → CompletionPipeline.execute(session, completedFields)
+    1. validate(fields, schema)
+    2. ClientResolver.resolve(name, phone) → upsert clients
+    3. CompletionHandler.insertEntity(schemaId) → repairs / budgets / print_orders
+    4. sessionStore.update(status='completed')
+    5. emitEvent(REPAIR_CREATED | BUDGET_CREATED | PRINT_ORDER_CREATED)
+  → Respuesta enriquecida
+```
+
+---
+
+## Reglas de dependencias permitidas
+
+```text
+Adaptadores (web / WhatsApp / admin)
+        ↓  (HTTP / eventos)
+    Handlers / Router
+        ↓  (llamadas síncronas, inyección)
+   Dominio (interview, business, completion, events)
+        ↓  (a través de interfaces)
+   Infraestructura (supabase, openrouter, kv, websearch)
+```
+
+### Prohibiciones
+
+- Un adaptador no llama directamente a Supabase ni a OpenRouter.
+- Un handler no inserta directamente en tablas de negocio (salvo admin CRUD explícito).
+- El motor de IA no accede a base de datos fuera de tools.
+- El dominio no depende de HTTP ni de canales específicos.
+
+---
+
+## Integración de capacidades futuras
+
+| Capacidad futura | Dónde se integra | Reutiliza |
+|---|---|---|
+| Tool Calling / MCP | Nueva tool en `services/nexus/tools/` + perfil | `ToolRegistry`, `ProfileManager` |
+| Búsqueda web | Ya existe `services/websearch.js`; wrap como tool | `NexusAIEngine` |
+| Búsqueda de precios | Nuevo `PriceService` en dominio + nueva tool | `ToolRegistry`, business services |
+| Agente administrativo | Nuevo perfil/assistant + `allowedTools` | `AdminAssistant`, business services |
+| Memoria de conversaciones | Extensión de `ContextManager` + tabla `chat_history` | Conversation session, events |
+| Automatizaciones | Suscriptor al event bus/queue | Event system, notifications |
+| Nuevo canal (Telegram, etc.) | Nuevo adapter + handler que reusa `ChatRuntime` | `ChatRuntime`, Completion Pipeline |
+| Nuevo servicio de entrevista | Schema JSON en `interview/v2/schemas/` | Interview v2 sin código nuevo |
+
+---
+
+## Estado actual vs. arquitectura v1
+
+| Aspecto | Estado actual | Objetivo v1 |
+|---|---|---|
+| Finalización de entrevista | Solo resumen de texto; sin registro de negocio | Completion Pipeline conectado |
+| Contrato de completado | Incompleto (faltan `summary`/`structuredSummary`/`progress`) | Contrato completo y documentado |
+| `minimumRequired` | `repair-request`: ya eliminado; `print-order` y `budget-request`: aún `2` (entrevistas inútiles para el negocio) | Completitud por campos requeridos en los 3 schemas |
+| Status de sesión | Siempre `'active'` | `'completed'` al terminar |
+| Primer mensaje | Se descarta | Persistido en metadata → sugerencias → aplicación con compuerta |
+| Canal WhatsApp + finalización | Webhook presente, sin persistencia de negocio | Reusa Completion Pipeline |
+
+---
 
 ## Cómo orientarse rápido
 
-1. El flujo de un mensaje comienza en `handlers/chat.js` (WhatsApp) o en el
-   frontend JS (`js/chatbot.js`), pasa por el Worker, y llega a `ChatRuntime`.
-2. `ChatRuntime` decide: ¿hay entrevista activa? → `InterviewRouter`; sino →
-   `NexusAIEngine`.
-3. `NexusAIEngine` usa `PlanningEngine` + `ToolExecutor` para razonar y actuar.
+1. Un mensaje entra por `handlers/chat.js` (web/WhatsApp) o `admin.js` (panel).
+2. `ChatRuntime` decide entre entrevista e IA general.
+3. `NexusAIEngine` razona mediante tools; `InterviewController` ejecuta el flujo estructurado.
 4. Toda lógica sensible y acceso a Supabase/OpenRouter vive en el Worker.
-5. Leer REGLAS.md antes de tocar flujo de chat, acceso a datos, o modelo de
-   reparaciones.
-6. Cualquier cambio de arquitectura, módulo, regla o decisión → anotar en
-   CAMBIOS.md.
+5. Al completar una entrevista, el único lugar autorizado para crear registros de negocio es el **Completion Pipeline**.
+6. Antes de cambiar arquitectura, módulos, reglas o decisiones, actualizar `.ai/`.

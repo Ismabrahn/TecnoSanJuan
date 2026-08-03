@@ -91,6 +91,20 @@ elección consciente por etapa del proyecto.
 
 ---
 
+## Memoria estructurada (`.ai/`)
+
+- `.ai/` describe **siempre el estado actual del proyecto**.
+- Funcionalidades futuras, experimentales o planificadas deben identificarse
+  explícitamente como tales (p. ej. "planificado", "en diseño", "no implementado")
+  y **nunca presentarse como implementadas**.
+- Si un módulo existe en el código pero su uso está pendiente de decisión de
+  negocio, debe indicarse (p. ej. `print-orders`: servicio existente, uso final en
+  revisión).
+- Antes de modificar `.ai/`, verificar la información contra el código real.
+  Si hay contradicción, informar la inconsistencia antes de actualizar la memoria.
+
+---
+
 ## Cómo agregar una nueva tool (proceso obligatorio)
 
 1. Crear `src/services/nexus/tools/mi-tool.js` con `{ name, description, parameters, execute }`.
@@ -100,3 +114,79 @@ elección consciente por etapa del proyecto.
 5. Documentar el cambio en CAMBIOS.md.
 
 **No tocar** `nexus-ai-engine.js`, `chat-runtime.js` ni `tool-executor.js`.
+
+---
+
+# Reglas de arquitectura v1
+
+## Finalización de entrevistas
+
+- **Completion Pipeline** (`services/completion/`) es el **único lugar autorizado**
+  para crear registros de negocio (`repairs`, `budgets`, `print_orders`, `clients`)
+  como resultado de una entrevista completada.
+- Los handlers (`chat.js`, `whatsapp-webhook.js`) **no insertan directamente** en
+  tablas de negocio. Invocan el pipeline.
+- La completitud natural de una entrevista = todos los campos `required`
+  no-skipped están completos. El intent `FINISH` genera un lead parcial.
+- Antes de insertar, el pipeline valida campos críticos del negocio. Si faltan,
+  no se crea la entidad; los datos permanecen en `interview_sessions`.
+- Al completar, `interview_sessions.status` pasa a `'completed'`.
+
+## Sesiones de entrevista
+
+- La fuente de verdad de las sesiones de entrevista es Supabase
+  (`interview_sessions`) a través de `SupabaseSessionStore`.
+- Cloudflare KV (`services/session-store.js`) es legacy para sesiones de
+  conversación; no se usa para entrevistas v2.
+- Existen dos identificadores separados:
+  - **session** = conversación (legacy, memoria/KV).
+  - **interview** = entrevista v2 (UUID generado por `StateKeeper`, persistido en
+    Supabase).
+  No confundirlos ni mezclarlos.
+
+## Datos del cliente
+
+- Un cliente se resuelve/crea por teléfono (`ClientResolver`) antes de crear una
+  entrevista de negocio. No se duplican clientes.
+- El botón WhatsApp usa el teléfono del negocio obtenido de
+  `/api/public/business-info`; el backend no envía `data.phone` en la respuesta de
+  completado.
+
+## Primer mensaje de una entrevista
+
+- El mensaje que dispara una entrevista se persiste en
+  `state.metadata.initialMessage`.
+- La extracción automática de campos a partir de ese mensaje se hace en etapas:
+  1. Persistir mensaje.
+  2. Extraer sugerencias a metadata (sin aplicar).
+  3. Aplicar automáticamente solo con compuerta de confianza, tras evidencia.
+- No aplicar extracción automática directamente en producción sin observabilidad
+  previa.
+
+## Calidad de datos en entrevistas
+
+- El fallback heurístico (usar el mensaje crudo como respuesta del campo
+  pendiente cuando el Interpreter devuelve vacío) aplica solo a campos
+  `text`/`phone`/`email`/`number`.
+- No extender ese fallback a `select`/`multiselect` sin una estrategia de
+  matching de opciones, porque puede provocar bucles de pregunta repetida.
+- Frases obvias de evasión ("no sé", "nada", "cancelar", "salir") no deben
+  guardarse como datos de negocio.
+
+## Estados como colas de revisión
+
+- `repairs.status='received'` y `budgets.status='pending'` representan entidades
+  aún no revisadas por un humano. El panel admin es la cola de validación.
+- No implementar un modo dry-run técnico separado: la revisión humana en el
+  panel es el mecanismo de validación.
+
+## Preparación para capacidades futuras
+
+- Nuevas capacidades de IA se integran como **tools** registradas en
+  `ToolRegistry` y habilitadas en un perfil.
+- Nuevos canales (Telegram, etc.) deben reusar `ChatRuntime` y el Completion
+  Pipeline, no reimplementar la lógica de finalización.
+- La memoria de conversaciones se agregará extendiendo `ContextManager` + una
+  tabla `chat_history`; no hardcodear historial en handlers.
+- Automatizaciones se implementan como suscriptores al event bus/queue
+  existente.

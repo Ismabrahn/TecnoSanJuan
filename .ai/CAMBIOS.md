@@ -7,6 +7,69 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 
 ---
 
+## 2026-08-03 — Baseline de tests y tests stale detectados
+
+- Se ejecutó `npm test` en `backend/worker`: **1357 tests pasan, 12 fallan**.
+- Los 12 fallos están en `src/services/nexus/interview-router.test.js`: el test
+  espera que frases como `"no funciona mi equipo"`, `"pantalla rota"`,
+  `"quiero saber el precio"`, `"presupuesto de reparación"`, `"necesito un diseño 3d"`
+  inicien entrevistas, pero los patrones regex actuales (más estrictos tras el
+  ajuste de 2026-07-30) no las matchean.
+- Esto indica que los tests quedaron desactualizados respecto a la decisión de
+  **High Precision** (no High Recall) del `InterviewRouter`.
+- Se registra este baseline; los tests no se modifican en Cambio 0 porque el
+  objetivo es consolidar el estado actual. Se abordarán en un cambio posterior.
+
+---
+
+## 2026-08-03 — Corrección de inconsistencia detectada entre `.ai/` y el código
+
+- Se detectó que `backend/worker/src/services/interview/v2/schemas/repair-request.json`
+  tenía `minimumRequired` eliminado en el working tree, mientras que
+  `print-order.json` y `budget-request.json` aún conservaban `minimumRequired: 2`.
+- Se corrigió `.ai/README.md` y `.ai/DECISIONES.md` para reflejar el estado real
+  del código: decisión tomada de eliminar el campo, pero implementación parcial
+  en este momento.
+- Esta corrección aplica la regla: **el código es la fuente de verdad**.
+
+---
+
+## 2026-08-03 — Nueva regla de mantenimiento de `.ai/`
+
+- Se agrega a `.ai/REGLAS.md` la regla: **la memoria estructurada describe
+  siempre el estado actual del proyecto**; las funcionalidades planificadas o
+  futuras deben identificarse explícitamente como tales y nunca presentarse como
+  implementadas.
+
+---
+
+## 2026-08-03 — Arquitectura v1 definida y plan revisado
+
+- Se define oficialmente la **Nexus Architecture v1** en `.ai/README.md`, con
+  capas claras: Adaptadores → Dominio → Infraestructura, y principios de diseño
+  para soportar Tool Calling, MCP, agentes especializados y nuevos canales.
+- Se documenta el **Completion Pipeline** (`services/completion/`) como módulo de
+  dominio planificado: único punto de orquestación para crear registros de
+  negocio al completar una entrevista, invocable desde web, WhatsApp y futuras
+  tools/agentes.
+- Se corrige la memoria respecto a Cloudflare KV: las sesiones de entrevista v2
+  viven únicamente en Supabase (`interview_sessions`); KV es legacy para
+  sesiones de conversación.
+- Se registra la decisión de eliminar `minimumRequired` de los schemas de
+  entrevista y usar la completitud por campos requeridos.
+- Se documenta la estrategia de 3 etapas para el primer mensaje de una
+  entrevista: persistir → extraer sugerencias → aplicar con compuerta de
+  confianza.
+- Se establece que no habrá modo dry-run técnico: la validación de datos
+  completados será un flujo de trabajo del panel admin (`repairs.status='received'`,
+  `budgets.status='pending'`).
+- Se actualizan `.ai/MODULOS.md` y `.ai/REGLAS.md` para reflejar el estado real
+  del subsistema Interview v2 y las nuevas reglas de arquitectura v1.
+- Esta revisión **no incluye código**: es la base obligatoria antes de iniciar
+  la implementación incremental del chat público.
+
+---
+
 ## 2026-07-30 — Navegación de código en `.ai/`
 
 - Se agregó a `MODULOS.md` una guía de navegación rápida con puntos de entrada,

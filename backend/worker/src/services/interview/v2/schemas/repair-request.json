@@ -7,7 +7,6 @@
   "updatedAt": "2026-07-26T00:00:00Z",
   "tags": ["reparacion", "arreglo", "tecnicatura", "servicio", "electronica"],
   "fieldOrder": ["clientName", "clientPhone", "device", "problem", "urgency"],
-  "minimumRequired": 2,
   "allowConcurrent": false,
   "fields": [
     {
