@@ -111,7 +111,7 @@ El backend usa Vitest (1369 tests, 71 archivos) con cobertura de todos los
 módulos del engine, interview, conversaciones, WhatsApp, admin, eventos y
 notificaciones.
 
-**Estado actual del baseline:** 1357 tests pasan, 12 fallan en
+**Estado actual del baseline:** 1360 tests pasan, 12 fallan en
 `src/services/nexus/interview-router.test.js` (tests stale respecto a los patrones
 regex actuales del `InterviewRouter`, que fueron endurecidos a High Precision en
 2026-07-30).
@@ -207,11 +207,21 @@ solo en reset/admin. No hay doble fuente de verdad para entrevistas.
 
 ## Primer mensaje de una entrevista
 
-Se adopta estrategia en etapas:
-1. Persistir el mensaje en `state.metadata.initialMessage`.
-2. Extraer sugerencias a `state.metadata.suggestedFields` sin aplicar al flujo.
-3. Auto-aplicar solo con compuerta de confianza, tras observar calidad del
-   Interpreter en producción.
+El mensaje que dispara una entrevista se persiste en `state.metadata.initialMessage`
+y se procesa inmediatamente con el `Interpreter` del subsistema Interview.
+
+- Los campos extraídos que sean **válidos según el schema** se aplican
+  automáticamente al estado de la entrevista, avanzando el flujo.
+- Los campos inválidos o ambiguos se descartan; no se guardan valores que no
+  pasen la validación del schema.
+- Si el `Interpreter` no está disponible (sin `aiAdapter`) o falla, el mensaje se
+  conserva en metadata pero no se aplica ningún campo.
+- No se aplica extracción cuando el intent detectado es `CANCEL`, `FINISH` o
+  `HELP`.
+
+**Motivo:** aprovechar la información del usuario desde el primer mensaje para
+reducir la cantidad de preguntas repetidas, pero sin comprometer la calidad de
+los datos: la validación determinística del schema es la compuerta de confianza.
 
 ## Botón WhatsApp
 

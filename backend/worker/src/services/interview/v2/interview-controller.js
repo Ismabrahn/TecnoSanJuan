@@ -164,6 +164,33 @@ export class InterviewController {
     return { flowResult, question, interviewComplete };
   }
 
+  #applyExtractedFields(session, extractedFields) {
+    let savedCount = 0;
+    let validationError = null;
+    let firstInvalidField = null;
+
+    for (const [fieldId, value] of Object.entries(extractedFields || {})) {
+      if (session.state.isFieldCompleted(fieldId)) continue;
+
+      const field = session.schema.fields.find(f => f.id === fieldId);
+      if (!field) continue;
+
+      const errors = validateFieldValue(field, value);
+      if (errors.length > 0) {
+        if (!validationError) {
+          validationError = errors.join(' ');
+          firstInvalidField = fieldId;
+        }
+        continue;
+      }
+
+      session.state.setUserValue(fieldId, value);
+      savedCount++;
+    }
+
+    return { savedCount, validationError, firstInvalidField };
+  }
+
   #applyInferences(session) {
     const inferenceResult = InferenceEngine.infer(session.schema, session.state);
     for (const [fieldId, value] of Object.entries(inferenceResult.inferredValues)) {
@@ -211,7 +238,7 @@ export class InterviewController {
     return rendered;
   }
 
-  async start(schema) {
+  async start(schema, message = null) {
     if (!schema || typeof schema !== 'object') {
       throw new InterpreterError('IC_INVALID_SCHEMA', 'Schema must be a non-null object');
     }
@@ -225,28 +252,52 @@ export class InterviewController {
       throw new InterpreterError('IC_INVALID_SCHEMA', 'Schema must have a serviceVersion');
     }
 
+    const metadata = message ? { initialMessage: message.trim() } : {};
     const state = StateKeeper.create(
       schema.serviceId,
-      schema.serviceVersion
+      schema.serviceVersion,
+      { metadata }
     );
 
     const sessionId = state.getInterviewId();
     await this.sessionStore.create(sessionId, { state, schema });
 
-    const flowResult = FlowEvaluator.evaluate(schema, state);
-    const interpreterResult = makeEmptyInterpreterResult();
-    const question = await this.#questionGenerator.generate(
-      schema, state, flowResult, interpreterResult
-    );
+    const session = { sessionId, state, schema };
 
-    const interviewComplete = flowResult.isComplete || question.question === null;
+    if (message && this.#interpreter) {
+      const trimmedMessage = message.trim();
+      try {
+        const interpreted = await this.#interpreter.interpret(schema, state, trimmedMessage);
+        if (![INTENTS.CANCEL, INTENTS.FINISH, INTENTS.HELP].includes(interpreted.detectedIntent)) {
+          this.#applyExtractedFields(session, interpreted.extractedFields);
+          this.#applyInferences(session);
+        }
+      } catch {
+        // Si la extracción del mensaje inicial falla, continuamos con el estado vacío.
+      }
+    }
+
+    const seededFields = Object.keys(state.getCompletedFields()).length;
+
+    let question;
+    let interviewComplete;
+    if (seededFields > 0) {
+      ({ question, interviewComplete } = await this.#persistAndGenerate(session));
+    } else {
+      const flowResult = FlowEvaluator.evaluate(schema, state);
+      const interpreterResult = makeEmptyInterpreterResult();
+      question = await this.#questionGenerator.generate(
+        schema, state, flowResult, interpreterResult
+      );
+      interviewComplete = flowResult.isComplete || question.question === null;
+    }
 
     return deepFreeze({
       sessionId,
       schemaId: schema.serviceId,
       question,
       interviewComplete,
-      summary: interviewComplete ? this.#buildSummary({ sessionId, schema, state }) : null,
+      summary: interviewComplete ? this.#buildSummary(session) : null,
     });
   }
 
@@ -406,28 +457,8 @@ export class InterviewController {
       }
     }
 
-    let savedCount = 0;
-    let validationError = null;
-    let firstInvalidField = null;
-
-    for (const [fieldId, value] of extracted) {
-      if (session.state.isFieldCompleted(fieldId)) continue;
-
-      const field = session.schema.fields.find(f => f.id === fieldId);
-      if (!field) continue;
-
-      const errors = validateFieldValue(field, value);
-      if (errors.length > 0) {
-        if (!validationError) {
-          validationError = errors.join(' ');
-          firstInvalidField = fieldId;
-        }
-        continue;
-      }
-
-      session.state.setUserValue(fieldId, value);
-      savedCount++;
-    }
+    const { savedCount, validationError, firstInvalidField } =
+      this.#applyExtractedFields(session, Object.fromEntries(extracted));
 
     this.#applyInferences(session);
     await this.sessionStore.update(sessionId, { state: session.state });

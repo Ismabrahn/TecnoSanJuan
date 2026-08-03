@@ -92,6 +92,65 @@ describe('InterviewController', () => {
       const ctrl = new InterviewController();
       await expect(ctrl.start({ serviceId: 'x', serviceVersion: '1.0.0' })).rejects.toThrow(InterpreterError);
     });
+
+    it('stores initial message in metadata and seeds valid extracted fields', async () => {
+      const interpreter = {
+        interpret: vi.fn().mockResolvedValue({
+          extractedFields: { name: 'Juan', phone: '123456789' },
+          ignoredFields: [],
+          ambiguousFields: [],
+          confidence: 0.9,
+          detectedIntent: 'ANSWER',
+          reasoning: '',
+          unknownFragments: [],
+          aiUsed: false,
+          latency: 0,
+        }),
+      };
+      const ctrl = new InterviewController({ interpreter });
+      const message = 'Hola, soy Juan, mi teléfono es 123456789';
+      const result = await ctrl.start(makeSchema(), message);
+
+      const session = await ctrl.sessionStore.get(result.sessionId);
+      expect(session.state.getMetadata().initialMessage).toBe(message);
+      expect(result.question.fieldId).toBe('color');
+      expect(session.state.isFieldCompleted('name')).toBe(true);
+      expect(session.state.isFieldCompleted('phone')).toBe(true);
+    });
+
+    it('skips invalid extracted fields from initial message and continues', async () => {
+      const interpreter = {
+        interpret: vi.fn().mockResolvedValue({
+          extractedFields: { name: 'Juan', phone: '12' },
+          ignoredFields: [],
+          ambiguousFields: [],
+          confidence: 0.9,
+          detectedIntent: 'ANSWER',
+          reasoning: '',
+          unknownFragments: [],
+          aiUsed: false,
+          latency: 0,
+        }),
+      };
+      const ctrl = new InterviewController({ interpreter });
+      const result = await ctrl.start(makeSchema(), 'Hola, soy Juan, teléfono 12');
+
+      const session = await ctrl.sessionStore.get(result.sessionId);
+      expect(session.state.isFieldCompleted('name')).toBe(true);
+      expect(session.state.isFieldCompleted('phone')).toBe(false);
+      expect(result.question.fieldId).toBe('phone');
+    });
+
+    it('does not seed when initial message is provided but interpreter is null', async () => {
+      const ctrl = new InterviewController();
+      const message = 'Hola, soy Juan';
+      const result = await ctrl.start(makeSchema(), message);
+
+      const session = await ctrl.sessionStore.get(result.sessionId);
+      expect(session.state.getMetadata().initialMessage).toBe(message);
+      expect(result.question.fieldId).toBe('name');
+      expect(session.state.isFieldCompleted('name')).toBe(false);
+    });
   });
 
   describe('answer', () => {

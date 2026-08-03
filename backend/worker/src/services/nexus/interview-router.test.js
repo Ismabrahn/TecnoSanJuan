@@ -232,7 +232,7 @@ describe('InterviewRouter', () => {
       const result = await router.startInterview('test-service');
 
       expect(mockRegistry.load).toHaveBeenCalledWith('test-service');
-      expect(mockController.start).toHaveBeenCalledWith(schema);
+      expect(mockController.start).toHaveBeenCalledWith(schema, null);
       expect(result.sessionId).toBe('abc');
       expect(result.question.question).toBe('test?');
     });

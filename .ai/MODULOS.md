@@ -60,7 +60,7 @@ carpeta para el detalle del schema de servicios.
 
 | Componente | Responsabilidad |
 |---|---|
-| `interview-controller.js` | Orquesta el pipeline: pregunta → interpreta → resuelve → avanza |
+| `interview-controller.js` | Orquesta el pipeline: pregunta → interpreta → resuelve → avanza; `start(schema, message)` aplica campos válidos del primer mensaje |
 | `flow-evaluator.js` | Determina siguiente campo, completitud y deadlocks según schema y estado |
 | `question-generator.js` | Genera la pregunta a mostrar según el campo pendiente |
 | `interpreter.js` | Único módulo de v2 que llama a OpenRouter. Extrae entidades del mensaje. |
@@ -164,7 +164,7 @@ que se quiere hacer, pero no el módulo. Las rutas son relativas a
 | El mensaje que se muestra en el chat web durante una entrevista | `../../../js/chatbot.js` | Bloque que procesa `data.interview`; muestra `data.response` con `addMessage()` y actualiza el progreso | `../../../js/api.js` → `handlers/chat.js` |
 | El estado de entrevista que devuelve el backend al navegador | `handlers/chat.js` | Construcción de `responseData.interview` después de `runtime.handleMessage()` | `services/nexus/chat-runtime.js` |
 | Cuándo un mensaje inicia una entrevista | `services/nexus/interview-router.js` | `shouldStartInterview()` y `selectSchema()` | `services/nexus/chat-runtime.js` → `services/nexus/tools/interview-tools.js` |
-| El inicio de una entrevista y su primera pregunta | `services/nexus/interview-router.js` | `startInterview(schemaId)` | `services/interview/v2/interview-controller.js` → `start()` |
+| El inicio de una entrevista y su primera pregunta | `services/nexus/interview-router.js` | `startInterview(schemaId, message)` | `services/interview/v2/interview-controller.js` → `start(schema, message)` |
 | Cómo se interpreta, valida y avanza una respuesta de entrevista | `services/interview/v2/interview-controller.js` | `answerMessage()` y el resultado con `question`, `interviewComplete`, `summary` | `interpreter.js` → `flow-evaluator.js` → `question-generator.js` |
 | Los campos, validaciones y resumen de una reparación | `services/interview/v2/schemas/repair-request.json` | `fields`, reglas de validación y `whatsappTemplate` | `schema-registry.js` → `interview-controller.js` |
 | La entrada, seguridad y respuesta de WhatsApp | `handlers/chat.js` | Pipeline de mensaje, rate limit y creación de `ChatRuntime` | `services/whatsapp/` → `services/nexus/chat-runtime.js` |

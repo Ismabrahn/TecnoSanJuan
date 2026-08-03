@@ -64,9 +64,9 @@ export class InterviewRouter {
     return schemaId;
   }
 
-  async startInterview(schemaId) {
+  async startInterview(schemaId, message = null) {
     const schema = await this.#schemaRegistry.load(schemaId);
-    const result = await this.#interviewController.start(schema);
+    const result = await this.#interviewController.start(schema, message);
     return {
       sessionId: result.sessionId,
       schemaId: result.schemaId,

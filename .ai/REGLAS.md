@@ -156,12 +156,12 @@ elección consciente por etapa del proyecto.
 
 - El mensaje que dispara una entrevista se persiste en
   `state.metadata.initialMessage`.
-- La extracción automática de campos a partir de ese mensaje se hace en etapas:
-  1. Persistir mensaje.
-  2. Extraer sugerencias a metadata (sin aplicar).
-  3. Aplicar automáticamente solo con compuerta de confianza, tras evidencia.
-- No aplicar extracción automática directamente en producción sin observabilidad
-  previa.
+- `InterviewController.start(schema, message)` interpreta el mensaje con el
+  `Interpreter` y aplica los campos extraídos que pasen la validación del schema.
+- Los campos inválidos se descartan; no se guardan como datos de negocio.
+- Si el `Interpreter` falla o no está disponible, el mensaje se conserva en
+  metadata y la entrevista comienza normalmente desde la primera pregunta.
+- No se aplica extracción para intents `CANCEL`, `FINISH` o `HELP`.
 
 ## Calidad de datos en entrevistas
 

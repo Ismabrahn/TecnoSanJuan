@@ -35,7 +35,7 @@ export class ChatRuntime {
     if (intent && !hasActiveInterview) {
       const schemaId = this.#interviewRouter.selectSchema(intent);
       if (schemaId) {
-        const startResult = await this.#interviewRouter.startInterview(schemaId);
+        const startResult = await this.#interviewRouter.startInterview(schemaId, trimmedMessage);
         return this.#formatInterviewStart(startResult);
       }
     }

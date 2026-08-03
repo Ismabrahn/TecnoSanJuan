@@ -7,6 +7,35 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 
 ---
 
+## 2026-08-03 — Primer mensaje: persistencia y aplicación automática de campos válidos
+
+- **Motivo:** el mensaje inicial que dispara una entrevista (ej. "Hola, se me
+  rompió la pantalla del iPhone, soy Juan, mi teléfono es 123456789") contenía
+  datos útiles que se descartaban; el sistema volvía a pedir nombre, teléfono y
+  problema.
+- **Cambios implementados:**
+  - `services/interview/v2/interview-controller.js`: `start(schema, message)`
+    ahora acepta un mensaje opcional, lo guarda en `state.metadata.initialMessage`
+    y, si hay `Interpreter`, extrae campos y aplica los que sean válidos según el
+    schema.
+  - Nuevo helper privado `#applyExtractedFields` reutilizado por `start` y
+    `answerMessage` para mantener una sola lógica de validación/aplicación.
+  - `services/nexus/interview-router.js`: `startInterview(schemaId, message)`
+    reenvía el mensaje original al controller.
+  - `services/nexus/chat-runtime.js`: pasa el mensaje del usuario a
+    `startInterview` cuando se detecta una intención de entrevista.
+  - Tests en `services/interview/v2/interview-controller.test.js`: cobertura de
+    metadata `initialMessage`, seeding de campos válidos, descarte de campos
+    inválidos y comportamiento sin `Interpreter`.
+- **Comportamiento:** la entrevista avanza según los campos que ya pasaron
+  validación; los inválidos se descartan sin bloquear el flujo. Si el mensaje no
+  aporta campos válidos, la entrevista comienza desde la primera pregunta.
+- **Tests:** nuevo baseline `1360 pasan / 12 fallan` en `backend/worker`. Los 12
+  fallos siguen siendo los tests stale de `interview-router.test.js` (regex High
+  Precision); no se introdujeron nuevos fallos.
+
+---
+
 ## 2026-08-03 — Baseline de tests y tests stale detectados
 
 - Se ejecutó `npm test` en `backend/worker`: **1357 tests pasan, 12 fallan**.
@@ -48,8 +77,8 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
   entrevista ya completó los requeridos. Cambiar eso requiere marcarlos como
   `required: true` o modificar la semántica del motor — fuera de alcance de este
   cambio.
-- **Tests:** mismo baseline que Cambio 0 (1357 pasan / 12 fallan en
-  `interview-router.test.js` por tests stale). No se introdujeron nuevos fallos.
+- **Tests:** baseline 1357 pasan / 12 fallan en `interview-router.test.js` por
+  tests stale. No se introdujeron nuevos fallos.
 
 ---
 
