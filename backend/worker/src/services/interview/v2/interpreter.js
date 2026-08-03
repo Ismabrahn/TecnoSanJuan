@@ -170,6 +170,13 @@ export class Interpreter {
       return this.#handleAIError(err, simpleIntent, ignoredFields, latency);
     }
 
+    // ── TEMP DIAGNOSTIC LOGGING (remove after diagnosis) ───────
+    console.log('[Interpreter:RAW]', JSON.stringify({
+      schemaId: schema.serviceId,
+      message,
+      rawText: raw.text,
+    }));
+
     const latency = Date.now() - startTime;
 
     // ── Stage 6: Parse AI response ────────────────────────────
