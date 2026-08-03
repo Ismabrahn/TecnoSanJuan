@@ -7,7 +7,6 @@
   "updatedAt": "2026-07-26T00:00:00Z",
   "tags": ["presupuesto", "precio", "cotizacion", "costo", "valor"],
   "fieldOrder": ["clientName", "clientPhone", "serviceType", "description", "contact"],
-  "minimumRequired": 2,
   "allowConcurrent": false,
   "fields": [
     {

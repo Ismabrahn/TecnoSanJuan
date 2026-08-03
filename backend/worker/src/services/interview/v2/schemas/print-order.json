@@ -7,7 +7,6 @@
   "updatedAt": "2026-07-26T00:00:00Z",
   "tags": ["impresion", "3d", "pieza", "figura", "diseño"],
   "fieldOrder": ["clientName", "clientPhone", "objectDescription", "material", "colors", "quantity"],
-  "minimumRequired": 2,
   "allowConcurrent": false,
   "fields": [
     {

@@ -174,9 +174,9 @@ La completitud natural de una entrevista se define por: **todos los campos
 elimina de los schemas actuales porque permitía marcar completa una solicitud con
 datos insuficientes para el negocio (nombre + teléfono).
 
-**Estado de implementación:** `repair-request.json` ya tiene `minimumRequired`
-eliminado en el working tree; `print-order.json` y `budget-request.json` aún lo
-conservan con valor `2`.
+**Estado de implementación:** `minimumRequired` eliminado de los tres schemas
+(`repair-request.json`, `print-order.json`, `budget-request.json`). La
+completitud natural ahora depende de los campos `required` no-skipped.
 
 El intent `FINISH` (usuario quiere terminar antes) sigue siendo válido y produce
 un **lead parcial**, detectable por la cantidad de `completedFields`. No se

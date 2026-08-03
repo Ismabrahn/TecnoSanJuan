@@ -154,7 +154,7 @@ Adaptadores (web / WhatsApp / admin)
 |---|---|---|
 | Finalización de entrevista | Solo resumen de texto; sin registro de negocio | Completion Pipeline conectado |
 | Contrato de completado | Incompleto (faltan `summary`/`structuredSummary`/`progress`) | Contrato completo y documentado |
-| `minimumRequired` | `repair-request`: ya eliminado; `print-order` y `budget-request`: aún `2` (entrevistas inútiles para el negocio) | Completitud por campos requeridos en los 3 schemas |
+| `minimumRequired` | Eliminado en los 3 schemas (`repair-request`, `print-order`, `budget-request`) | Completitud por campos requeridos en los 3 schemas |
 | Status de sesión | Siempre `'active'` | `'completed'` al terminar |
 | Primer mensaje | Se descarta | Persistido en metadata → sugerencias → aplicación con compuerta |
 | Canal WhatsApp + finalización | Webhook presente, sin persistencia de negocio | Reusa Completion Pipeline |

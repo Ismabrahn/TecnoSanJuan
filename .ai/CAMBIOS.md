@@ -34,6 +34,25 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 
 ---
 
+## 2026-08-03 — Cambio 6: eliminar `minimumRequired` de todos los schemas de Interview
+
+- **Motivo:** con `minimumRequired: 2`, las entrevistas finalizaban tras nombre
+  + teléfono, sin recopilar datos del negocio (equipo, problema, pieza, material,
+  cantidad, tipo de servicio, descripción).
+- **Cambio:** se elimina `minimumRequired` de `print-order.json` y
+  `budget-request.json` (ya estaba eliminado de `repair-request.json`).
+- **Comportamiento:** ahora las entrevistas completan cuando todos los campos
+  `required` no-skipped están respondidos.
+- **Nota:** campos opcionales al final del `fieldOrder` (`urgency` en
+  `repair-request`, `contact` en `budget-request`) no se preguntan porque la
+  entrevista ya completó los requeridos. Cambiar eso requiere marcarlos como
+  `required: true` o modificar la semántica del motor — fuera de alcance de este
+  cambio.
+- **Tests:** mismo baseline que Cambio 0 (1357 pasan / 12 fallan en
+  `interview-router.test.js` por tests stale). No se introdujeron nuevos fallos.
+
+---
+
 ## 2026-08-03 — Nueva regla de mantenimiento de `.ai/`
 
 - Se agrega a `.ai/REGLAS.md` la regla: **la memoria estructurada describe
