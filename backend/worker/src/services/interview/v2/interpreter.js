@@ -326,14 +326,40 @@ RULES:
 - If the user provides information, set intent to ANSWER.
 - If the intent is unclear, set intent to UNKNOWN.
 - Return ONLY valid JSON. No markdown, no code fences, no extra text.
+- The keys in the "fields" object MUST be the EXACT \\\"field.id\\\" values shown in the schema context (e.g. \\\"clientName\\\", \\\"clientPhone\\\", \\\"device\\\", \\\"problem\\\").
+- DO NOT use generic labels such as \\\"name\\\", \\\"phone\\\", \\\"equipment\\\", \\\"issue\\\" or any other synonym as field keys. Only the schema IDs are valid.
+
+CORRECT example:
+{
+  "intent": "ANSWER",
+  "reasoning": "User provided name, phone, device and problem",
+  "fields": {
+    "clientName": "Juan",
+    "clientPhone": "3405123456",
+    "device": "Samsung S23",
+    "problem": "se cayó al agua"
+  },
+  "ambiguous": [],
+  "unknownFragments": []
+}
+
+INCORRECT example (never do this):
+{
+  "fields": {
+    "name": "Juan",
+    "phone": "3405123456",
+    "equipment": "Samsung S23",
+    "issue": "se cayó al agua"
+  }
+}
 
 JSON format:
 {
   "intent": "ANSWER|FINISH|CANCEL|HELP|UNKNOWN",
   "reasoning": "Brief explanation of what was extracted",
-  "fields": { "field_id": "extracted_value" },
+  "fields": { "exact_field_id_from_schema": "extracted_value" },
   "ambiguous": [
-    { "fieldId": "field_id", "possibleValues": ["val1", "val2"], "originalText": "what user said" }
+    { "fieldId": "exact_field_id_from_schema", "possibleValues": ["val1", "val2"], "originalText": "what user said" }
   ],
   "unknownFragments": ["text not matching any field"]
 }`;

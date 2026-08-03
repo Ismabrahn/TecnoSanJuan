@@ -7,6 +7,25 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 
 ---
 
+## 2026-08-03 — Fix: contrato de claves entre Interpreter y schemas de Interview
+
+- **Motivo:** el primer mensaje se persistía e interpretaba, pero los campos
+  extraídos no se aplicaban porque el LLM devolvía claves genéricas (`name`,
+  `phone`, `equipment`, `issue`) en lugar de los `field.id` exactos del schema
+  (`clientName`, `clientPhone`, `device`, `problem`).
+- **Cambio:** se actualizó el system prompt de `interpreter.js` para exigir
+  explícitamente que las claves del objeto `fields` coincidan exactamente con
+  los `field.id` definidos en el schema. Se agregaron ejemplos correctos e
+  incorrectos.
+- **Comportamiento:** cuando el LLM respeta los IDs del schema, el primer
+  mensaje alimenta `InterviewController.start()` y los campos válidos se aplican
+  automáticamente. Si el mensaje completa todos los campos requeridos, la
+  entrevista finaliza en el primer turno.
+- **Tests:** 1360 pasan / 12 fallan. Los 12 fallos siguen siendo los tests stale
+  de `interview-router.test.js`.
+
+---
+
 ## 2026-08-03 — Primer mensaje: persistencia y aplicación automática de campos válidos
 
 - **Motivo:** el mensaje inicial que dispara una entrevista (ej. "Hola, se me
