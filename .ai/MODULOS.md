@@ -41,7 +41,7 @@ y ubicación en el código.
 | `conversation-session.js` | Modelo de datos de una conversación: id, cliente, canal, estado, historial |
 | `observability.js` | Métricas: latencia, tools ejecutadas, errores, mensajes procesados |
 | `admin-assistant.js` | Variante del engine para uso interno del panel admin |
-| `interview-router.js` | Puente entre Nexus e Interview. Detecta intención, inicia/avanzas entrevista. |
+| `interview-router.js` | Puente entre Nexus e Interview. Detecta intención, inicia/avanzas entrevista. `startInterview()` propaga `question`, `interviewComplete` y `summary` desde `InterviewController`. |
 | `client-resolver.js` | Resuelve cliente (nombre + teléfono) a registro en `clients` |
 | `interview/completion-handler.js` | Crea registro de negocio (`repair`/`budget`/`print-order`) y cliente al completar entrevista |
 

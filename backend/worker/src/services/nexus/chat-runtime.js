@@ -32,16 +32,6 @@ export class ChatRuntime {
 
     const intent = this.#interviewRouter.shouldStartInterview(trimmedMessage);
     const hasActiveInterview = sessionId ? await this.#interviewRouter.hasActiveInterview(sessionId) : false;
-
-    // ── TEMP DIAGNOSTIC LOGGING (remove after diagnosis) ───────
-    console.log('[ChatRuntime:ROUTE]', JSON.stringify({
-      intent,
-      hasActiveInterview,
-      branch: intent && !hasActiveInterview
-        ? 'deterministic-start'
-        : (sessionId && hasActiveInterview ? 'answer' : 'engine'),
-    }));
-
     if (intent && !hasActiveInterview) {
       const schemaId = this.#interviewRouter.selectSchema(intent);
       if (schemaId) {

@@ -170,13 +170,6 @@ export class Interpreter {
       return this.#handleAIError(err, simpleIntent, ignoredFields, latency);
     }
 
-    // ── TEMP DIAGNOSTIC LOGGING (remove after diagnosis) ───────
-    console.log('[Interpreter:RAW]', JSON.stringify({
-      schemaId: schema.serviceId,
-      message,
-      rawText: raw.text,
-    }));
-
     const latency = Date.now() - startTime;
 
     // ── Stage 6: Parse AI response ────────────────────────────
@@ -563,13 +556,6 @@ JSON format:
   // ── Private: error handling ────────────────────────────────────
 
   #handleAIError(err, simpleIntent, ignoredFields, latency) {
-    // ── TEMP DIAGNOSTIC LOGGING (remove after diagnosis) ───────
-    console.log('[Interpreter:AI_ERROR]', JSON.stringify({
-      code: err?.code,
-      name: err?.name,
-      message: err?.message,
-    }));
-
     const intent = simpleIntent || INTENTS.UNKNOWN;
     let reasoning = '';
 

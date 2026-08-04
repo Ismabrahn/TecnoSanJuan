@@ -7,6 +7,36 @@ Repositorio: https://github.com/Ismabrahn/TecnoSanJuan
 
 ---
 
+## 2026-08-03 — Fix definitivo del primer mensaje en producción y limpieza de logs de diagnóstico
+
+- **Causa raíz encontrada:** `AIAdapter` aliasaba `globalThis.fetch` en un campo
+  privado y lo invocaba como `this.#fetch(...)`. En el runtime de Cloudflare
+  Workers el `fetch` nativo exige el scope global como receptor; con la instancia
+  de `AIAdapter` como `this` lanzaba `TypeError: Illegal invocation`, envuelto
+  como `AINetworkError` y tragado en silencio por el `catch` de `start()`. El
+  sistema parecía funcionar por el fallback heurístico; la extracción IA real
+  nunca corría en producción. En tests y en Node local no fallaba porque se
+  inyecta un fetch mock y el fetch de Node no es sensible al receptor.
+- **Fix 1 (`f41efcb`):** `ai-adapter.js` — `globalThis.fetch.bind(globalThis)`
+  preserva el receptor correcto en Workers; los mocks inyectados en tests no se
+  tocan.
+- **Fix 2 (`57d24cd`):** `interview-router.js` — `startInterview()` ahora propaga
+  `summary` desde `InterviewController.start()`. Antes se descartaba y el usuario
+  recibía el fallback genérico "Solicitud procesada correctamente." en lugar del
+  `summaryTemplate` del schema.
+- **Diagnóstico con logs temporales:** se agregaron `[Interpreter:RAW]`
+  (`8fe2999`), `[Interpreter:AI_ERROR]` y `[ChatRuntime:ROUTE]` (`2485025`) para
+  localizar el punto de falla. Una vez confirmados los fixes en producción, se
+  eliminan los tres. El log permanente `[AIAdapter]` se conserva.
+- **Verificado en producción:** el mensaje "Hola, se me cayó el Samsung S23 al
+  agua, soy Juan, mi número es 3405806523" extrae `clientName`, `clientPhone`,
+  `device` y `problem`, completa la entrevista en el primer turno y responde con
+  el `summaryTemplate` del schema.
+- **Tests:** 1360 pasan / 12 fallan (los mismos tests stale de
+  `interview-router.test.js`).
+
+---
+
 ## 2026-08-03 — Fix: contrato de claves entre Interpreter y schemas de Interview
 
 - **Motivo:** el primer mensaje se persistía e interpretaba, pero los campos
