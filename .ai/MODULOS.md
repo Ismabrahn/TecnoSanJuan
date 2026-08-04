@@ -12,7 +12,7 @@ y ubicación en el código.
 | Chat (web) | Atención por chat web: FAQ, info del negocio, horarios, entrevistas | ✅ Funcional | `js/chatbot.js` |
 | Chat (WhatsApp) | Atención bidireccional por WhatsApp (entrada + salida) | ✅ Funcional | `handlers/chat.js`, `services/whatsapp/` |
 | Interview | Recolecta datos estructurados para reparación, presupuesto e impresión 3D | ✅ Implementado | `services/interview/v2/` |
-| Completion Pipeline *(planificado)* | Orquesta finalización de entrevistas: validación → cliente → entidad de negocio → eventos | 🟡 Planificado | `services/completion/` |
+| Completion Pipeline | Orquesta finalización de entrevistas: validación → cliente → entidad de negocio → eventos | ✅ Implementado | `services/completion/` |
 | Admin — Conversaciones | Gestión de conversaciones activas desde el panel interno | 🟡 En construcción | `admin/js/admin.js`, `handlers/admin.js` |
 | Admin — Clientes | Gestión de clientes: datos personales, historial | 🟡 En construcción | `admin/js/modules/clients/` |
 | Admin — Reparaciones | Ciclo de vida de reparaciones | 🟡 En construcción | `admin/js/modules/repairs/` |
@@ -85,19 +85,19 @@ carpeta para el detalle del schema de servicios.
 6. ¿Completo? → generar resumen + structuredSummary
 ```
 
-### Completion Pipeline — `services/completion/` (planificado)
+### Completion Pipeline — `services/completion/`
 
 Módulo de dominio que orquesta el cierre de una entrevista completada.
 
 | Componente | Responsabilidad |
 |---|---|
 | `completion-pipeline.js` | Punto único: validar → resolver cliente → insertar entidad → actualizar sesión → emitir evento |
-| `validation/` | Validar campos críticos del negocio antes de insertar |
-| `client-resolver.js` | Upsert de cliente por teléfono (delega en `services/business/client-service.js`) |
-| `entity-handler.js` | Delega en `CompletionHandler` para insertar repair/budget/print-order |
-| `event-emitter.js` | Emite eventos al bus/queue existente |
+| `validation/` *(planificado)* | Validar campos críticos del negocio antes de insertar |
+| `client-resolver.js` *(planificado)* | Upsert de cliente por teléfono (delega en `services/business/client-service.js`) |
+| `entity-handler.js` *(planificado)* | Delega en `CompletionHandler` para insertar repair/budget/print-order |
+| `event-emitter.js` *(planificado)* | Emite eventos al bus/queue existente |
 
-**Nota:** actualmente `CompletionHandler` (`services/nexus/interview/completion-handler.js`) existe y está testeado, pero **no está cableado** al flujo de chat. El Completion Pipeline lo envolverá y será invocable desde cualquier canal (web, WhatsApp, tools/agentes).
+**Nota:** `CompletionHandler` (`services/nexus/interview/completion-handler.js`) existe y está testeado, pero **no está cableado** al flujo de chat. `CompletionPipeline` lo envuelve (valida completitud con `FlowEvaluator`, resuelve cliente vía `ClientResolver`, delega la creación al `CompletionHandler`, marca `interview_sessions.status='completed'` y encola eventos al `EventQueue`) y será invocable desde cualquier canal (web, WhatsApp, tools/agentes). El pipeline no está cableado a `chat.js` todavía.
 
 ### WhatsApp — `services/whatsapp/`
 
