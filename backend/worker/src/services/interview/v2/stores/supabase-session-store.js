@@ -51,12 +51,14 @@ export class SupabaseSessionStore extends SessionStore {
     this.#cache.set(sessionId, {
       state: data.state,
       schema: deepClone(schema),
+      status: 'active',
     });
 
     return deepFreeze({
       sessionId,
       state: deepClone(stateJson),
       schema: deepFreeze(deepClone(schema)),
+      status: 'active',
     });
   }
 
@@ -67,6 +69,7 @@ export class SupabaseSessionStore extends SessionStore {
         sessionId,
         state: cached.state,
         schema: deepFreeze(deepClone(cached.schema)),
+        status: cached.status,
       };
     }
 
@@ -84,13 +87,39 @@ export class SupabaseSessionStore extends SessionStore {
 
     const state = StateKeeper.fromJSON(data.state);
     const schema = data.schema;
+    const status = data.status || 'active';
 
-    this.#cache.set(sessionId, { state, schema });
+    this.#cache.set(sessionId, { state, schema, status });
 
     return {
       sessionId,
       state,
       schema: deepFreeze(deepClone(schema)),
+      status,
+    };
+  }
+
+  async markCompleted(sessionId) {
+    const { data, error } = await this.#supabase
+      .from(this.#tableName)
+      .update({ status: 'completed' })
+      .eq('id', sessionId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      throw new StoreError('DATABASE_ERROR', `Failed to mark session completed: ${error.message}`, { cause: error });
+    }
+
+    if (!data) return null;
+
+    if (this.#cache.has(sessionId)) {
+      this.#cache.get(sessionId).status = 'completed';
+    }
+
+    return {
+      sessionId,
+      status: data.status,
     };
   }
 

@@ -38,7 +38,7 @@ Responsabilidad: contener las reglas del negocio. **No depende de adaptadores.**
 | Componente | Ubicación | Responsabilidad |
 |---|---|---|
 | Interview v2 | `services/interview/v2/` | Recolección estructurada de datos: schemas, state, flow, questions, interpreter, validation. |
-| Completion Pipeline | `services/completion/` (planificado) | Único punto de orquestación de finalización: validación → cliente → entidad → evento. |
+| Completion Pipeline | `services/completion/` | Único punto de orquestación de finalización: validación → cliente → entidad → evento. |
 | Business services | `services/business/` | CRUD de clientes, reparaciones, presupuestos, órdenes de impresión. |
 | Events | `services/events/` | Bus, cola, repositorio, worker y DLQ de eventos. |
 | Notifications | `services/notifications/` | Templates y canales de notificación. |
@@ -152,10 +152,10 @@ Adaptadores (web / WhatsApp / admin)
 
 | Aspecto | Estado actual | Objetivo v1 |
 |---|---|---|
-| Finalización de entrevista | Solo resumen de texto; sin registro de negocio | Completion Pipeline conectado |
+| Finalización de entrevista | Completion Pipeline cableado en `handlers/chat.js`: crea cliente + entidad (`repairs`/`budgets`/`print_orders`) y marca la sesión `'completed'` | Respuesta enriquecida + eventos/notificaciones |
 | Contrato de completado | Incompleto (faltan `summary`/`structuredSummary`/`progress`) | Contrato completo y documentado |
 | `minimumRequired` | Eliminado en los 3 schemas (`repair-request`, `print-order`, `budget-request`) | Completitud por campos requeridos en los 3 schemas |
-| Status de sesión | Siempre `'active'` | `'completed'` al terminar |
+| Status de sesión | `'active'` durante la entrevista; `'completed'` al completar (vía `markCompleted`) | `'completed'` al terminar |
 | Primer mensaje | Persistido en metadata, campos válidos extraídos se aplican automáticamente | Igual; validación por schema garantiza que no se guarden valores inválidos |
 | Canal WhatsApp + finalización | Webhook presente, sin persistencia de negocio | Reusa Completion Pipeline |
 

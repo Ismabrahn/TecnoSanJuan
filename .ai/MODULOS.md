@@ -69,7 +69,7 @@ carpeta para el detalle del schema de servicios.
 | `state-keeper.js` | Estado inmutable de la entrevista con historial |
 | `schema-registry.js` | Carga, valida y cachea schemas JSON |
 | `schema-index.js` | Mapa de schemas integrados (imports ES estáticos) |
-| `stores/supabase-session-store.js` | Persistencia de sesiones en Supabase (`interview_sessions`) |
+| `stores/supabase-session-store.js` | Persistencia de sesiones en Supabase (`interview_sessions`); `get()` expone `status`, `markCompleted()` lo pasa a `'completed'` |
 | `stores/memory-session-store.js` | Persistencia en memoria para tests |
 | `session-store.js` | Clase base abstracta de los stores |
 | `ai-adapter.js` | Adaptador hacia OpenRouter para el Interpreter y QuestionGenerator |
@@ -97,7 +97,7 @@ Módulo de dominio que orquesta el cierre de una entrevista completada.
 | `entity-handler.js` *(planificado)* | Delega en `CompletionHandler` para insertar repair/budget/print-order |
 | `event-emitter.js` *(planificado)* | Emite eventos al bus/queue existente |
 
-**Nota:** `CompletionHandler` (`services/nexus/interview/completion-handler.js`) existe y está testeado, pero **no está cableado** al flujo de chat. `CompletionPipeline` lo envuelve (valida completitud con `FlowEvaluator`, resuelve cliente vía `ClientResolver`, delega la creación al `CompletionHandler`, marca `interview_sessions.status='completed'` y encola eventos al `EventQueue`) y será invocable desde cualquier canal (web, WhatsApp, tools/agentes). El pipeline no está cableado a `chat.js` todavía.
+**Nota:** `CompletionHandler` (`services/nexus/interview/completion-handler.js`) está testeado y envuelto por `CompletionPipeline`. El pipeline (valida completitud con `FlowEvaluator`, resuelve cliente vía `ClientResolver`, delega la creación al `CompletionHandler`, marca `interview_sessions.status='completed'` y encola eventos al `EventQueue`) está **cableado en `handlers/chat.js`**: cuando una entrevista completa, `chat.js` invoca `CompletionPipeline.execute({ sessionId })` antes de responder. La emisión de eventos al `EventQueue` y el resto de canales (WhatsApp, tools/agentes) quedan pendientes.
 
 ### WhatsApp — `services/whatsapp/`
 

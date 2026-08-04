@@ -248,6 +248,47 @@ describe('SupabaseSessionStore', () => {
       expect(result.schema).toBeDefined();
     });
 
+    it('returns status from DB row', async () => {
+      const data = createTestData();
+      const stateJson = data.state.toJSON();
+      const supabase = createMockSupabase([
+        { id: data.sessionId, schema_id: 'test-svc', status: 'completed', state: stateJson, schema: data.schema },
+      ]);
+      const store = new SupabaseSessionStore(supabase);
+
+      const result = await store.get(data.sessionId);
+
+      expect(result.status).toBe('completed');
+    });
+
+    it('returns status from cache after create', async () => {
+      const supabase = createMockSupabase();
+      const store = new SupabaseSessionStore(supabase);
+      const data = createTestData();
+
+      await store.create(data.sessionId, { state: data.state, schema: data.schema });
+      const cached = await store.get(data.sessionId);
+
+      expect(cached.status).toBe('active');
+    });
+
+    it('returns status from cache after first load', async () => {
+      const data = createTestData();
+      const stateJson = data.state.toJSON();
+      const supabase = createMockSupabase([
+        { id: data.sessionId, schema_id: 'test-svc', status: 'completed', state: stateJson, schema: data.schema },
+      ]);
+      const store = new SupabaseSessionStore(supabase);
+
+      await store.get(data.sessionId);
+      supabase.from.mockClear();
+
+      const cached = await store.get(data.sessionId);
+
+      expect(cached.status).toBe('completed');
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
     it('returns null for non-existing session', async () => {
       const supabase = createMockSupabase();
       const store = new SupabaseSessionStore(supabase);
@@ -494,6 +535,72 @@ describe('SupabaseSessionStore', () => {
 
       const cached = await store.get(data.sessionId);
       expect(cached.schema.serviceId).toBe('cached-update');
+    });
+  });
+
+  describe('markCompleted', () => {
+    it('updates status to completed in supabase', async () => {
+      const data = createTestData();
+      const stateJson = data.state.toJSON();
+      const supabase = createMockSupabase([
+        { id: data.sessionId, schema_id: 'test-svc', status: 'active', state: stateJson, schema: data.schema },
+      ]);
+      const store = new SupabaseSessionStore(supabase);
+
+      const result = await store.markCompleted(data.sessionId);
+
+      expect(result).toBeTruthy();
+      expect(result.status).toBe('completed');
+      const { data: storedRow } = await supabase
+        .from('interview_sessions')
+        .select('*')
+        .eq('id', data.sessionId)
+        .maybeSingle();
+      expect(storedRow.status).toBe('completed');
+    });
+
+    it('updates cache status after markCompleted', async () => {
+      const data = createTestData();
+      const stateJson = data.state.toJSON();
+      const supabase = createMockSupabase([
+        { id: data.sessionId, schema_id: 'test-svc', status: 'active', state: stateJson, schema: data.schema },
+      ]);
+      const store = new SupabaseSessionStore(supabase);
+
+      await store.get(data.sessionId);
+      await store.markCompleted(data.sessionId);
+
+      const cached = await store.get(data.sessionId);
+      expect(cached.status).toBe('completed');
+    });
+
+    it('returns null for non-existing session', async () => {
+      const supabase = createMockSupabase();
+      const store = new SupabaseSessionStore(supabase);
+
+      const result = await store.markCompleted('nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('handles supabase update error', async () => {
+      const data = createTestData();
+      const stateJson = data.state.toJSON();
+      const supabase = createMockSupabase([
+        { id: data.sessionId, schema_id: 'test-svc', status: 'active', state: stateJson, schema: data.schema },
+      ]);
+      supabase.from = vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi.fn(() => ({
+              maybeSingle: vi.fn(() => ({ data: null, error: { message: 'update failed' } })),
+            })),
+          })),
+        })),
+      }));
+      const store = new SupabaseSessionStore(supabase);
+
+      await expect(store.markCompleted(data.sessionId)).rejects.toThrow(StoreError);
     });
   });
 

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { chat } from '../services/openrouter.js';
-import { query } from '../services/supabase.js';
+import { query, insert } from '../services/supabase.js';
 import { webSearch, formatSearchResults } from '../services/websearch.js';
 import { buildContext, buildMessages } from '../services/context.js';
 import { errorResponse } from '../middleware/error.js';
@@ -149,7 +149,7 @@ export async function handleChat(request, env) {
     IN_FLIGHT.add(clientIp);
 
     try {
-      const runtime = await createChatRuntime(env, chatContext);
+      const { runtime, completionPipeline } = await createChatRuntime(env, chatContext);
       const session = body.session || createSession();
       const conversationSessionId = session.id || session.session_id || crypto.randomUUID();
       session.id = conversationSessionId;
@@ -179,6 +179,20 @@ export async function handleChat(request, env) {
         };
       }
 
+      if (result.type === 'completed' && result.sessionId) {
+        try {
+          const pipelineResult = await completionPipeline.execute({
+            sessionId: result.sessionId,
+          });
+          if (!pipelineResult.success && pipelineResult.error !== 'SESSION_NOT_FOUND') {
+            responseData.response = 'No pudimos registrar tu solicitud. Intentá nuevamente.';
+          }
+        } catch (err) {
+          log.error('[CHAT]', `CompletionPipeline error: ${err.message}`);
+          responseData.response = 'No pudimos registrar tu solicitud. Intentá nuevamente.';
+        }
+      }
+
       return new Response(JSON.stringify(responseData), {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -201,6 +215,12 @@ async function createChatRuntime(env, chatContext) {
   const { SupabaseSessionStore } = await import('../services/interview/v2/stores/supabase-session-store.js');
   const { AIAdapter } = await import('../services/interview/v2/ai-adapter.js');
   const { registerInterviewTools } = await import('../services/nexus/tools/interview-tools.js');
+  const { CompletionPipeline } = await import('../services/completion/completion-pipeline.js');
+  const { ClientResolver } = await import('../services/nexus/client-resolver.js');
+  const { ClientService } = await import('../services/business/client-service.js');
+  const { RepairService } = await import('../services/business/repair-service.js');
+  const { BudgetService } = await import('../services/business/budget-service.js');
+  const { PrintService } = await import('../services/business/print-service.js');
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
   const sessionStore = new SupabaseSessionStore(supabase);
@@ -212,6 +232,25 @@ async function createChatRuntime(env, chatContext) {
   const schemaRegistry = new SchemaRegistry({ skipValidation: env.ENVIRONMENT === 'production' });
   const interviewController = new InterviewController({ sessionStore, schemaRegistry, aiAdapter });
   const interviewRouter = new InterviewRouter({ schemaRegistry, interviewController });
+
+  const clientService = new ClientService({
+    insertFn: (table, data) => insert(env, table, data, true),
+    queryFn: (table, opts) => query(env, table, opts, true),
+  });
+  const clientResolver = new ClientResolver({ clientService });
+  const completionPipeline = new CompletionPipeline({
+    sessionStore,
+    clientResolver,
+    repairService: new RepairService({
+      insertFn: (table, data) => insert(env, table, data, true),
+    }),
+    budgetService: new BudgetService({
+      insertFn: (table, data) => insert(env, table, data, true),
+    }),
+    printService: new PrintService({
+      insertFn: (table, data) => insert(env, table, data, true),
+    }),
+  });
 
   const engine = new NexusAIEngine({
     chatFn: async (prompt) => {
@@ -233,5 +272,8 @@ async function createChatRuntime(env, chatContext) {
     'interviewController'
   );
 
-  return new ChatRuntime({ engine, interviewRouter });
+  return {
+    runtime: new ChatRuntime({ engine, interviewRouter }),
+    completionPipeline,
+  };
 }
