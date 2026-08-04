@@ -52,7 +52,7 @@ export class AIAdapter {
     this.#maxRetries = options.maxRetries || parseInt(process.env.OPENROUTER_MAX_RETRIES, 10) || AI.DEFAULT_MAX_RETRIES;
     this.#cacheTtl = options.cacheTtl || CACHE.TTL;
     this.#cacheEnabled = options.cacheEnabled !== false;
-    this.#fetch = options.fetch || globalThis.fetch;
+    this.#fetch = options.fetch || globalThis.fetch.bind(globalThis);
     this.#cache = new Map();
 
     if (!this.#apiKey) {
