@@ -29,41 +29,48 @@ BEGIN;
 -- 0. PRE-FLIGHT — evidencia de que los DROP son seguros
 -- ----------------------------------------------------------------------------
 
--- 0.1 Los tres DROP están autorizados solo si las tablas siguen vacías.
+-- 0.1 Pre-flight de existencia y conteo.
+--     Obligatorias (deben existir): clients, repairs, budgets, interview_sessions.
+--       - clients/repairs/budgets: se aborta si tienen filas (no dropear).
+--       - interview_sessions: se aborta si no existe; nunca se dropea.
+--     Opcionales (tablas NUEVAS, pueden no existir aún): print_orders, events,
+--       notifications, event_dlq, admin_activity_log. Se cuentan SOLO si existen.
+--     Uso de to_regclass() para evitar ERROR 42P01 (relation does not exist).
 DO $$
 DECLARE
+  t text;
   n bigint;
-  missing text := '';
+  required text[] := ARRAY['clients', 'repairs', 'budgets', 'interview_sessions'];
+  optional text[] := ARRAY['print_orders', 'events', 'notifications', 'event_dlq', 'admin_activity_log'];
 BEGIN
-  IF to_regclass('public.clients') IS NOT NULL THEN
-    EXECUTE 'SELECT count(*) FROM public.clients' INTO n;
-    IF n > 0 THEN RAISE EXCEPTION 'ABORT: clients tiene % filas. No se dropea.', n; END IF;
-  ELSE
-    missing := missing || 'clients ';
+  -- Tablas obligatorias: deben existir en producción.
+  FOREACH t IN ARRAY required LOOP
+    IF to_regclass('public.' || t) IS NULL THEN
+      RAISE EXCEPTION 'ABORT: tabla obligatoria % no existe.', t;
+    END IF;
+  END LOOP;
+
+  -- clients/repairs/budgets: DROP autorizado solo si siguen vacías.
+  FOREACH t IN ARRAY ARRAY['clients', 'repairs', 'budgets']::text[] LOOP
+    EXECUTE format('SELECT count(*) FROM public.%I', t) INTO n;
+    IF n > 0 THEN
+      RAISE EXCEPTION 'ABORT: % tiene % filas. No se dropea.', t, n;
+    END IF;
+  END LOOP;
+
+  -- interview_sessions: se conserva; se verifica que siga teniendo datos.
+  EXECUTE 'SELECT count(*) FROM public.interview_sessions' INTO n;
+  IF n = 0 THEN
+    RAISE NOTICE 'WARNING: interview_sessions está vacía (se esperaba 31 registros).';
   END IF;
 
-  IF to_regclass('public.repairs') IS NOT NULL THEN
-    EXECUTE 'SELECT count(*) FROM public.repairs' INTO n;
-    IF n > 0 THEN RAISE EXCEPTION 'ABORT: repairs tiene % filas. No se dropea.', n; END IF;
-  ELSE
-    missing := missing || 'repairs ';
-  END IF;
-
-  IF to_regclass('public.budgets') IS NOT NULL THEN
-    EXECUTE 'SELECT count(*) FROM public.budgets' INTO n;
-    IF n > 0 THEN RAISE EXCEPTION 'ABORT: budgets tiene % filas. No se dropea.', n; END IF;
-  ELSE
-    missing := missing || 'budgets ';
-  END IF;
-
-  IF missing <> '' THEN
-    RAISE EXCEPTION 'ABORT: faltan tablas legacy: %', missing;
-  END IF;
-
-  -- interview_sessions debe existir y conservarse.
-  IF to_regclass('public.interview_sessions') IS NULL THEN
-    RAISE EXCEPTION 'ABORT: interview_sessions no existe. Se esperaba con 31 registros.';
-  END IF;
+  -- Tablas nuevas: se reportan solo si existen, sin abortar si faltan.
+  FOREACH t IN ARRAY optional LOOP
+    IF to_regclass('public.' || t) IS NOT NULL THEN
+      EXECUTE format('SELECT count(*) FROM public.%I', t) INTO n;
+      RAISE NOTICE 'INFO: % ya existe con % filas (tabla nueva).', t, n;
+    END IF;
+  END LOOP;
 END $$;
 
 -- 0.2 Dependencias FK externas hacia clients/repairs/budgets.
