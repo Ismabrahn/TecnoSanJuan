@@ -72,6 +72,7 @@ export class InterviewRouter {
       schemaId: result.schemaId,
       question: result.question,
       interviewComplete: result.interviewComplete,
+      summary: result.summary,
     };
   }
 
