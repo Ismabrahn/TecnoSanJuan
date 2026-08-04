@@ -8,14 +8,17 @@
 --
 -- SEGURIDAD (regla: NO DROP sin evidencia de tablas vacías):
 --   1. Pre-flight: aborta si clients/repairs/budgets tienen filas.
---   2. Pre-flight: aborta si hay dependencias FK externas hacia las tablas
---      que se van a dropear.
---   3. Documenta la migración en schema_migration_log antes de tocar nada.
---   4. interview_sessions NO se dropea; solo ALTER aditivo.
+--   2. Pre-flight: aborta si hay dependencias FK externas NO declaradas hacia
+--      las tablas que se van a dropear.
+--   3. work_orders se mantiene intacta: solo se elimina su FK legacy
+--      (work_orders_repair_id_fkey) hacia repairs antes del DROP.
+--   4. Documenta la migración en schema_migration_log antes de tocar nada.
+--   5. interview_sessions NO se dropea; solo ALTER aditivo.
 --
 -- Orden de ejecución:
---   pre-flight -> backup/log -> DROP legacy -> CREATE nuevo esquema
---   -> ALTER interview_sessions -> índices UNIQUE de idempotencia
+--   pre-flight -> backup/log -> DROP FKs legacy -> DROP legacy
+--   -> CREATE nuevo esquema -> ALTER interview_sessions
+--   -> índices UNIQUE de idempotencia
 --
 -- Ejecutar una sola vez en el SQL Editor de Supabase.
 -- ============================================================================
@@ -63,11 +66,19 @@ BEGIN
   END IF;
 END $$;
 
--- 0.2 Dependencias FK externas hacia clients/repairs/budgets
---     (cualquier tabla que las referencie bloquearía el DROP o se rompería).
+-- 0.2 Dependencias FK externas hacia clients/repairs/budgets.
+--     Aborta si hay alguna FK externa NO declarada (una tabla que las
+--     referencie bloquearía el DROP o se rompería).
+--     Las FKs legacy declaradas se eliminan explícitamente en la sección 2.
 DO $$
 DECLARE
   dep record;
+  declared_fks text[] := ARRAY[
+    'work_orders_repair_id_fkey',
+    'budgets_repair_id_fkey',
+    'repairs_client_id_fkey',
+    'budgets_client_id_fkey'
+  ];
 BEGIN
   FOR dep IN
     SELECT c.conrelid::regclass AS dependent_table,
@@ -84,8 +95,9 @@ BEGIN
         to_regclass('public.repairs'),
         to_regclass('public.budgets')
       )
+      AND NOT (c.conname = ANY(declared_fks))
   LOOP
-    RAISE EXCEPTION 'ABORT: % depende de una tabla a dropear (FK %)', dep.dependent_table, dep.constraint_name;
+    RAISE EXCEPTION 'ABORT: % depende de una tabla a dropear (FK % no declarada)', dep.dependent_table, dep.constraint_name;
   END LOOP;
 END $$;
 
@@ -110,8 +122,17 @@ VALUES (
 );
 
 -- ----------------------------------------------------------------------------
--- 2. DROP — SOLO las tres tablas legacy vacías
+-- 2. DROP de FKs legacy y de las tablas legacy vacías
 -- ----------------------------------------------------------------------------
+-- 2.1 Eliminar explícitamente las FKs legacy que dependen de las tablas a
+--     dropear. work_orders se mantiene intacta (solo se le quita su FK a
+--     repairs); las demás FKs residen en las propias tablas que se dropean.
+ALTER TABLE IF EXISTS public.work_orders DROP CONSTRAINT IF EXISTS work_orders_repair_id_fkey;
+ALTER TABLE IF EXISTS public.budgets     DROP CONSTRAINT IF EXISTS budgets_repair_id_fkey;
+ALTER TABLE IF EXISTS public.repairs     DROP CONSTRAINT IF EXISTS repairs_client_id_fkey;
+ALTER TABLE IF EXISTS public.budgets     DROP CONSTRAINT IF EXISTS budgets_client_id_fkey;
+
+-- 2.2 DROP — SOLO las tres tablas legacy vacías
 DROP TABLE IF EXISTS public.budgets;
 DROP TABLE IF EXISTS public.repairs;
 DROP TABLE IF EXISTS public.clients;
